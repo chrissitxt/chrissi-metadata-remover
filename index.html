@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>chrissi's metadata remover</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧼</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Google+Sans+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    /* design tokens */
+    :root {
+        --background: #ffffff;
+        --accent: #000000;
+        --body: #000000;
+        --sub: #4f4f4f;
+        --highlight: #e0e0e0;
+        --glass-bg: rgba(0, 0, 0, 0.03);
+        --glass-border: rgba(0, 0, 0, 0.08);
+        --spacing: 8px;
+        --spacing-2: 16px;
+        --spacing-3: 24px;
+        --spacing-4: 32px;
+        --weight-body: 400;
+        --weight-accent: 500;
+        --border-radius: 8px;
+        --border-radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --background: #000000;
+            --accent: #e9e9e9;
+            --body: #a2a2a2;
+            --sub: #6e6e6e;
+            --highlight: #222222;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+    }
+
+    html {
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: var(--glass-border) transparent;
+        scrollbar-gutter: stable;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Inter";
+        background: var(--background);
+        color: var(--accent);
+        min-height: 100vh;
+        font-weight: var(--weight-body);
+    }
+
+    ::selection {
+        background: var(--highlight);
+    }
+
+    .glass {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(12px);
+        transition: filter 0.2s;
+    }
+
+    .page {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: clamp(28px, 6vw, 56px) clamp(20px, 4vw, 40px);
+    }
+
+    .page-title {
+        font-size: 26px;
+        font-weight: var(--weight-accent);
+        margin-bottom: var(--spacing-4);
+        color: var(--accent);
+    }
+
+    /* settings */
+    .options {
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-2) var(--spacing-3);
+        margin-bottom: var(--spacing-2);
+    }
+
+    .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--spacing-2);
+        padding: 14px 0;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .row:last-child {
+        border-bottom: none;
+    }
+
+    .row label {
+        font-size: 14px;
+        color: var(--body);
+    }
+
+    .toggle {
+        width: 36px;
+        height: 20px;
+        border-radius: 10px;
+        border: 1px solid var(--glass-border);
+        position: relative;
+        cursor: pointer;
+        background: var(--glass-bg);
+        transition: background 0.2s ease, border-color 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .toggle.on {
+        background: var(--accent);
+        border-color: var(--accent);
+    }
+
+    .toggle::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--sub);
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .toggle.on::after {
+        transform: translateX(16px);
+        background: var(--background);
+    }
+
+    /* drop zone */
+    .dropzone {
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-4) var(--spacing-3);
+        margin-bottom: var(--spacing-4);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing);
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .dropzone.drag-over {
+        border-color: var(--accent);
+        background: var(--highlight);
+    }
+
+    .dropzone svg {
+        width: 28px;
+        height: 28px;
+        color: var(--sub);
+        margin-bottom: 4px;
+    }
+
+    .dropzone-label {
+        font-size: 14px;
+        color: var(--body);
+    }
+
+    .dropzone-sub {
+        font-size: 13px;
+        color: var(--sub);
+    }
+
+    .dropzone input[type="file"] {
+        display: none;
+    }
+
+    /* batch card, replaces the dropzone while files are handled */
+    .batch {
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-3);
+        margin-bottom: var(--spacing-4);
+        display: none;
+        flex-direction: column;
+        animation: card-in 0.3s ease;
+    }
+
+    .batch.visible {
+        display: flex;
+    }
+
+    @keyframes card-in {
+        from { opacity: 0; transform: translateY(-3px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .file-rows {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .file-row {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        padding: var(--spacing) 0;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .file-row:last-child {
+        border-bottom: none;
+    }
+
+    .file-thumb {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--border-radius);
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .file-name {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        color: var(--body);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .file-name.updated {
+        animation: name-update 0.3s ease;
+    }
+
+    @keyframes name-update {
+        0% { opacity: 0; transform: translateY(-2px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .file-name.updated { animation: none; }
+    }
+
+    /* review, shown before processing starts */
+    .review {
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-3);
+        margin-bottom: var(--spacing-4);
+        display: none;
+        flex-direction: column;
+        animation: card-in 0.3s ease;
+    }
+
+    .review.visible {
+        display: flex;
+    }
+
+    .review-summary {
+        font-size: 13px;
+        color: var(--sub);
+        padding-bottom: var(--spacing-2);
+        margin-bottom: var(--spacing);
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .review-size {
+        font-size: 12px;
+        color: var(--sub);
+        flex-shrink: 0;
+    }
+
+    .review-remove {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        color: var(--sub);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s ease;
+    }
+
+    .review-remove:hover {
+        color: var(--accent);
+    }
+
+    .review-remove svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    button#processBtn {
+        width: 100%;
+        margin-top: var(--spacing-2);
+        padding: 14px;
+        border-radius: var(--border-radius);
+        border: none;
+        background: var(--accent);
+        color: var(--background);
+        font-family: "Inter";
+        font-size: 14px;
+        font-weight: var(--weight-accent);
+        cursor: pointer;
+        transition: opacity 0.2s ease, transform 0.1s ease;
+    }
+
+    button#processBtn:hover {
+        opacity: 0.85;
+    }
+
+    button#processBtn:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+
+    button#addMoreBtn {
+        width: 100%;
+        margin-top: var(--spacing-2);
+        padding: 10px;
+        border-radius: var(--border-radius);
+        border: 1px dashed var(--glass-border);
+        background: none;
+        color: var(--sub);
+        font-family: "Inter";
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    button#addMoreBtn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    button#addMoreBtn:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+    }
+
+    .batch-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--spacing-2);
+        padding-top: var(--spacing-2);
+        margin-top: var(--spacing);
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .compare {
+        display: none;
+    }
+
+    .compare.visible {
+        display: block;
+        margin-top: var(--spacing);
+        padding-top: var(--spacing-2);
+        border-top: 1px solid var(--glass-border);
+        animation: card-in 0.3s ease;
+    }
+
+    .compare-heading {
+        font-size: 12px;
+        font-weight: var(--weight-accent);
+        color: var(--sub);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin: var(--spacing-2) 0 var(--spacing);
+    }
+
+    .compare-heading:first-child {
+        margin-top: 0;
+    }
+
+    .compare .row {
+        padding: 6px 0;
+    }
+
+    .compare .row label {
+        font-size: 13px;
+    }
+
+    .value {
+        font-family: "Google Sans Code";
+        font-size: 13px;
+        color: var(--sub);
+        text-align: right;
+    }
+
+    .value.found {
+        color: var(--accent);
+    }
+
+    .status-icon.skippable {
+        cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+
+    .status-icon.skippable:hover {
+        transform: scale(1.15);
+    }
+
+    .status-icon.skippable:active {
+        transform: scale(0.9);
+    }
+
+    .batch-footer-text {
+        font-size: 13px;
+        color: var(--sub);
+    }
+
+    .status-icon {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .status-icon.small {
+        width: 22px;
+        height: 22px;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+    }
+
+    .status-icon.small.visible {
+        opacity: 1;
+    }
+
+    .spinner-ring {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid var(--glass-border);
+        border-top-color: var(--accent);
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .spinner-ring { animation: none; border-top-color: var(--glass-border); }
+    }
+
+    .checkmark {
+        width: 16px;
+        height: 16px;
+        color: var(--accent);
+        animation: check-pop 0.3s ease;
+    }
+
+    @keyframes check-pop {
+        0% { transform: scale(0.5); opacity: 0; }
+        60% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .checkmark { animation: none; }
+    }
+
+    .progress-ring {
+        position: absolute;
+        inset: 0;
+        width: 28px;
+        height: 28px;
+        transform: rotate(-90deg);
+    }
+
+    .progress-ring .progress-track {
+        fill: none;
+        stroke: var(--glass-border);
+        stroke-width: 2;
+    }
+
+    .progress-ring .progress-fill {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-dasharray: 75.4;
+        stroke-dashoffset: 0;
+        animation: ring-deplete 20000ms linear forwards;
+    }
+
+    @keyframes ring-deplete {
+        to { stroke-dashoffset: 75.4; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .progress-ring .progress-fill { animation: none; stroke-dashoffset: 75.4; }
+    }
+
+    /* faq */
+    .faq {
+        margin-bottom: var(--spacing-4);
+    }
+
+    .faq-item {
+        border-radius: var(--border-radius-lg);
+        margin-bottom: var(--spacing);
+        overflow: hidden;
+    }
+
+    .faq-question {
+        width: 100%;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 14px var(--spacing-3);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--spacing-2);
+        font-family: "Inter";
+        font-size: 14px;
+        color: var(--body);
+    }
+
+    .faq-item .chevron {
+        width: 16px;
+        height: 16px;
+        color: var(--sub);
+        flex-shrink: 0;
+        transform: rotate(180deg);
+        transition: transform 0.25s ease;
+    }
+
+    .faq-item.open .chevron {
+        transform: rotate(0deg);
+    }
+
+    .faq-answer-wrap {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.25s ease;
+    }
+
+    .faq-item.open .faq-answer-wrap {
+        grid-template-rows: 1fr;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .faq-answer-wrap { transition: none; }
+    }
+
+    .faq-answer-inner {
+        overflow: hidden;
+    }
+
+    .faq-answer {
+        padding: 0 var(--spacing-3) var(--spacing-3);
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--sub);
+    }
+
+    /* footer credit */
+    .made-by {
+        display: block;
+        text-align: center;
+        margin-top: var(--spacing-4);
+        font-size: 13px;
+        color: var(--sub);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .made-by:hover {
+        color: var(--accent);
+    }
+
+    .section-divider {
+        border: none;
+        border-top: 1px solid var(--glass-border);
+        margin: var(--spacing-4) 0;
+    }
+</style>
+</head>
+<body>
+
+<div class="page">
+    <h1 class="page-title">chrissi's metadata remover</h1>
+
+    <div class="options glass">
+        <div class="row">
+            <label>randomize filename</label>
+            <div class="toggle" id="randomizeFilename"></div>
+        </div>
+    </div>
+
+    <div class="dropzone glass" id="dropzone">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /><path d="M12 11v6" /><path d="M9.5 13.5l2.5 -2.5l2.5 2.5" /></svg>
+        <span class="dropzone-label">drop images here, or click to browse</span>
+        <span class="dropzone-sub">jpeg, jpg, png, webp · up to 8 files, 100mb each</span>
+    </div>
+
+    <div class="review glass" id="review">
+        <div class="review-summary" id="reviewSummary"></div>
+        <div class="file-rows" id="reviewRows"></div>
+        <button id="addMoreBtn" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+            add more files
+        </button>
+        <button id="processBtn">remove metadata</button>
+    </div>
+
+    <div class="batch glass" id="batch">
+        <div class="file-rows" id="fileRows"></div>
+        <div class="compare" id="compare"></div>
+        <div class="batch-footer">
+            <span class="batch-footer-text" id="batchFooterText">removing metadata</span>
+            <div class="status-icon" id="batchStatusIcon">
+                <div class="spinner-ring"></div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <div class="faq">
+        <div class="faq-item glass">
+            <button class="faq-question" type="button" aria-expanded="false">
+                how it works
+                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M6 15l6 -6l6 6" /></svg>
+            </button>
+            <div class="faq-answer-wrap">
+                <div class="faq-answer-inner">
+                    <div class="faq-answer">
+                        just drop your files in, or click to browse. everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. metadata is stripped: recognized location, camera, author, document-property, and media-tag structures are removed, while the actual file content stays untouched. each cleaned file downloads individually as soon as it's done.
+                        <br><br>
+                        right now this only supports jpeg, png, and webp images, up to 8 files at a time, 100mb each.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a class="made-by" href="https://chrissitxt.me" target="_blank" rel="noopener noreferrer">made by chrissi</a>
+</div>
+
+<script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const review = document.getElementById('review');
+    const reviewSummary = document.getElementById('reviewSummary');
+    const reviewRows = document.getElementById('reviewRows');
+    const processBtn = document.getElementById('processBtn');
+    const addMoreBtn = document.getElementById('addMoreBtn');
+    const batch = document.getElementById('batch');
+    const fileRows = document.getElementById('fileRows');
+    const compare = document.getElementById('compare');
+    const batchFooterText = document.getElementById('batchFooterText');
+    const batchStatusIcon = document.getElementById('batchStatusIcon');
+    const randomizeFilename = document.getElementById('randomizeFilename');
+
+    let pendingFiles = [];
+    let randomizeFilenameOn = false;
+
+    const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_FILES = 8;
+    const MAX_SIZE = 100 * 1024 * 1024;
+
+    randomizeFilename.addEventListener('click', () => {
+        randomizeFilename.classList.toggle('on');
+        randomizeFilenameOn = randomizeFilename.classList.contains('on');
+    });
+
+    function randomFilename(length = 12) {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        const values = new Uint32Array(length);
+        crypto.getRandomValues(values);
+        let result = '';
+        for (let i = 0; i < length; i++) result += chars[values[i] % chars.length];
+        return result;
+    }
+
+    document.querySelectorAll('.faq-question').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = btn.closest('.faq-item');
+            const isOpen = item.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen);
+        });
+    });
+
+    function getValidFiles(fileList) {
+        return Array.from(fileList)
+            .filter(f => ACCEPTED_TYPES.includes(f.type) && f.size <= MAX_SIZE)
+            .slice(0, MAX_FILES);
+    }
+
+    function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function renderReview() {
+        if (!pendingFiles.length) {
+            review.classList.remove('visible');
+            dropzone.style.display = 'flex';
+            return;
+        }
+
+        dropzone.style.display = 'none';
+        review.classList.add('visible');
+
+        const totalSize = pendingFiles.reduce((sum, f) => sum + f.size, 0);
+        reviewSummary.textContent = `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} · ${formatBytes(totalSize)} total`;
+
+        reviewRows.innerHTML = '';
+        pendingFiles.forEach((file, index) => {
+            const row = document.createElement('div');
+            row.className = 'file-row';
+            row.innerHTML = `
+                <img class="file-thumb" alt="">
+                <span class="file-name"></span>
+                <span class="review-size"></span>
+                <div class="review-remove" role="button" aria-label="remove file">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                </div>
+            `;
+            row.querySelector('.file-thumb').src = URL.createObjectURL(file);
+            row.querySelector('.file-name').textContent = file.name;
+            row.querySelector('.review-size').textContent = formatBytes(file.size);
+            row.querySelector('.review-remove').addEventListener('click', () => {
+                pendingFiles.splice(index, 1);
+                renderReview();
+            });
+            reviewRows.appendChild(row);
+        });
+    }
+
+    function addFiles(newFiles) {
+        const room = MAX_FILES - pendingFiles.length;
+        pendingFiles = pendingFiles.concat(newFiles.slice(0, Math.max(room, 0)));
+        renderReview();
+    }
+
+    addMoreBtn.addEventListener('click', () => fileInput.click());
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        review.addEventListener(evt, e => e.preventDefault());
+    });
+
+    review.addEventListener('drop', e => {
+        e.preventDefault();
+        const files = getValidFiles(e.dataTransfer.files);
+        if (files.length) addFiles(files);
+    });
+
+    processBtn.addEventListener('click', () => {
+        const files = pendingFiles;
+        pendingFiles = [];
+        review.classList.remove('visible');
+        handleFiles(files);
+    });
+
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropzone.addEventListener(evt, e => {
+            e.preventDefault();
+            dropzone.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+        dropzone.addEventListener(evt, e => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+        });
+    });
+
+    dropzone.addEventListener('drop', e => {
+        const files = getValidFiles(e.dataTransfer.files);
+        if (files.length) addFiles(files);
+    });
+
+    fileInput.addEventListener('change', () => {
+        const files = getValidFiles(fileInput.files);
+        if (files.length) addFiles(files);
+        fileInput.value = '';
+    });
+
+    // minimal EXIF reader, just enough to read the orientation tag
+    function readExif(buffer) {
+        const view = new DataView(buffer);
+        if (view.getUint16(0, false) !== 0xFFD8) return null;
+        let offset = 2;
+        while (offset < view.byteLength - 4) {
+            const marker = view.getUint16(offset, false);
+            if (marker === 0xFFE1 && view.getUint32(offset + 4, false) === 0x45786966) {
+                return parseTiff(view, offset + 10);
+            }
+            if ((marker & 0xFF00) !== 0xFF00) break;
+            offset += 2 + view.getUint16(offset + 2, false);
+        }
+        return null;
+    }
+
+    function parseTiff(view, tiffStart) {
+        const little = view.getUint16(tiffStart, false) === 0x4949;
+        const ifdOffset = view.getUint32(tiffStart + 4, little);
+        const entries = view.getUint16(tiffStart + ifdOffset, little);
+        const tags = { 0x010F: 'make', 0x0110: 'model', 0x0112: 'orientation', 0x0132: 'dateTime', 0x8825: 'gps' };
+        const result = {};
+        for (let i = 0; i < entries; i++) {
+            const entryOffset = tiffStart + ifdOffset + 2 + i * 12;
+            const tag = view.getUint16(entryOffset, little);
+            const name = tags[tag];
+            if (!name) continue;
+            const type = view.getUint16(entryOffset + 2, little);
+            const count = view.getUint32(entryOffset + 4, little);
+            const valueOffset = entryOffset + 8;
+            if (name === 'orientation') {
+                result.orientation = view.getUint16(valueOffset, little);
+            } else if (name === 'gps') {
+                result.gps = true;
+            } else if (type === 2) {
+                const strStart = count > 4 ? tiffStart + view.getUint32(valueOffset, little) : valueOffset;
+                let str = '';
+                for (let j = 0; j < count - 1; j++) {
+                    const c = view.getUint8(strStart + j);
+                    if (c === 0) break;
+                    str += String.fromCharCode(c);
+                }
+                result[name] = str.trim();
+            }
+        }
+        return result;
+    }
+
+    function buildMinimalOrientationExif(orientation) {
+        return new Uint8Array([
+            0xFF, 0xE1, 0x00, 0x22,
+            0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+            0x01, 0x00,
+            0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, orientation & 0xFF, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+        ]);
+    }
+
+    // strips APPn/COM segments (exif, xmp, comments, thumbnails) while leaving the
+    // compressed image data byte-for-byte untouched. if the original had an
+    // orientation tag, a minimal replacement segment carrying only that tag is
+    // re-inserted so the image still displays the right way up.
+    function stripJpegParts(buffer, orientation) {
+        const bytes = new Uint8Array(buffer);
+        const view = new DataView(buffer);
+        if (bytes.length < 4 || view.getUint16(0, false) !== 0xFFD8) return [buffer];
+
+        const parts = [bytes.subarray(0, 2)];
+        if (orientation && orientation !== 1) {
+            parts.push(buildMinimalOrientationExif(orientation));
+        }
+
+        let offset = 2;
+        while (offset < bytes.length - 1) {
+            if (bytes[offset] !== 0xFF) { offset++; continue; }
+            const marker = bytes[offset + 1];
+
+            if (marker === 0xD9) {
+                parts.push(bytes.subarray(offset, offset + 2));
+                break;
+            }
+
+            if (marker === 0xDA) {
+                // start of scan: copy the scan header plus every remaining byte
+                // (entropy-coded data, any further scans, EOI) completely as-is
+                parts.push(bytes.subarray(offset, bytes.length));
+                break;
+            }
+
+            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) {
+                parts.push(bytes.subarray(offset, offset + 2));
+                offset += 2;
+                continue;
+            }
+
+            const segLength = view.getUint16(offset + 2, false);
+            const isMetadataSegment = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
+            if (!isMetadataSegment) {
+                parts.push(bytes.subarray(offset, offset + 2 + segLength));
+            }
+            offset += 2 + segLength;
+        }
+
+        return parts;
+    }
+
+    // strips ancillary text/time/exif chunks while leaving every chunk needed
+    // to render the image (IHDR, PLTE, IDAT, IEND, color profile) untouched.
+    function stripPngParts(buffer) {
+        const bytes = new Uint8Array(buffer);
+        const view = new DataView(buffer);
+        const stripTypes = new Set(['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME']);
+        const parts = [bytes.subarray(0, 8)];
+
+        let offset = 8;
+        while (offset < bytes.length) {
+            const length = view.getUint32(offset, false);
+            const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
+            const chunkTotal = 12 + length;
+            if (!stripTypes.has(type)) {
+                parts.push(bytes.subarray(offset, offset + chunkTotal));
+            }
+            offset += chunkTotal;
+            if (type === 'IEND') break;
+        }
+
+        return parts;
+    }
+
+    // strips EXIF/XMP RIFF chunks, keeps the actual VP8/VP8L image data and
+    // alpha/animation chunks untouched, then rewrites the RIFF size field.
+    function stripWebpParts(buffer) {
+        const bytes = new Uint8Array(buffer);
+        const view = new DataView(buffer);
+        if (bytes.length < 12 || String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]) !== 'RIFF') return [buffer];
+
+        const stripTypes = new Set(['EXIF', 'XMP ']);
+        const chunkParts = [];
+        let offset = 12;
+        while (offset < bytes.length) {
+            const fourcc = String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
+            const size = view.getUint32(offset + 4, true);
+            const chunkTotal = 8 + size + (size % 2);
+            if (!stripTypes.has(fourcc)) {
+                chunkParts.push(bytes.subarray(offset, offset + chunkTotal));
+            }
+            offset += chunkTotal;
+        }
+
+        const totalSize = chunkParts.reduce((sum, p) => sum + p.length, 0) + 4;
+        const sizeField = new Uint8Array(4);
+        new DataView(sizeField.buffer).setUint32(0, totalSize, true);
+
+        return [
+            new TextEncoder().encode('RIFF'),
+            sizeField,
+            new TextEncoder().encode('WEBP'),
+            ...chunkParts
+        ];
+    }
+
+    function stripMetadataParts(type, buffer, orientation) {
+        if (type === 'image/jpeg') return stripJpegParts(buffer, orientation);
+        if (type === 'image/png') return stripPngParts(buffer);
+        if (type === 'image/webp') return stripWebpParts(buffer);
+        return [buffer];
+    }
+
+    function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function waitOrSkip(ms, el) {
+        return new Promise(resolve => {
+            const timer = setTimeout(finish, ms);
+            function finish() {
+                clearTimeout(timer);
+                el.removeEventListener('click', finish);
+                resolve();
+            }
+            el.addEventListener('click', finish, { once: true });
+        });
+    }
+
+    async function processImage(file) {
+        const buffer = await file.arrayBuffer();
+        const exif = file.type === 'image/jpeg' ? (readExif(buffer) || {}) : {};
+
+        const [parts] = await Promise.all([
+            Promise.resolve(stripMetadataParts(file.type, buffer, exif.orientation)),
+            wait(700)
+        ]);
+
+        const blob = new Blob(parts, { type: file.type });
+        const ext = file.type === 'image/png' ? 'png' : (file.type === 'image/webp' ? 'webp' : 'jpg');
+
+        return { blob, ext, exif, originalSize: file.size };
+    }
+
+    function createRow(file) {
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        row.innerHTML = `
+            <img class="file-thumb" alt="">
+            <span class="file-name"></span>
+            <div class="status-icon small">
+                <div class="spinner-ring"></div>
+            </div>
+        `;
+        row.querySelector('.file-name').textContent = file.name;
+        row.querySelector('.file-thumb').src = URL.createObjectURL(file);
+        return {
+            el: row,
+            icon: row.querySelector('.status-icon'),
+            name: row.querySelector('.file-name')
+        };
+    }
+
+    async function handleFiles(files) {
+        dropzone.style.display = 'none';
+        batch.classList.add('visible');
+        fileRows.innerHTML = '';
+        compare.classList.remove('visible');
+        compare.innerHTML = '';
+        batchStatusIcon.innerHTML = '<div class="spinner-ring"></div>';
+
+        const rows = files.map(file => {
+            const row = createRow(file);
+            fileRows.appendChild(row.el);
+            return row;
+        });
+
+        let singleFileResult = null;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const row = rows[i];
+            batchFooterText.textContent = `removing metadata (${i + 1}/${files.length})`;
+            row.icon.classList.add('visible');
+
+            const { blob, ext, exif, originalSize } = await processImage(file);
+
+            row.icon.innerHTML = '<svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l5 5l10 -10" /></svg>';
+
+            const dot = file.name.lastIndexOf('.');
+            const base = randomizeFilenameOn
+                ? randomFilename()
+                : (dot > -1 ? file.name.slice(0, dot) + '-clean' : file.name + '-clean');
+            const newName = `${base}.${ext}`;
+            row.name.textContent = newName;
+            row.name.classList.add('updated');
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = newName;
+            a.click();
+            URL.revokeObjectURL(downloadUrl);
+
+            if (files.length === 1) {
+                singleFileResult = { exif, originalSize, cleanedSize: blob.size };
+            }
+        }
+
+        if (singleFileResult) renderCompare(singleFileResult);
+
+        batchStatusIcon.innerHTML = '<svg class="progress-ring" viewBox="0 0 28 28"><circle class="progress-track" cx="14" cy="14" r="12" /><circle class="progress-fill" cx="14" cy="14" r="12" /></svg><svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l5 5l10 -10" /></svg>';
+        batchFooterText.textContent = (files.length > 1 ? 'all files downloaded' : 'downloaded') + ' · tap to dismiss';
+        batchStatusIcon.classList.add('skippable');
+
+        await waitOrSkip(20000, batchStatusIcon);
+        batchStatusIcon.classList.remove('skippable');
+        batch.classList.remove('visible');
+        dropzone.style.display = 'flex';
+    }
+
+    function renderCompare(result) {
+        const { exif, originalSize, cleanedSize } = result;
+        const beforeRows = [
+            ['file size', formatBytes(originalSize), false],
+            ['camera', exif.make || exif.model ? [exif.make, exif.model].filter(Boolean).join(' ') : 'not found', !!(exif.make || exif.model)],
+            ['gps location', exif.gps ? 'found' : 'not found', !!exif.gps],
+            ['date taken', exif.dateTime || 'not found', !!exif.dateTime]
+        ];
+
+        compare.innerHTML = `
+            <div class="compare-heading">before</div>
+            ${beforeRows.map(([label, value, found]) => `
+                <div class="row">
+                    <label>${label}</label>
+                    <span class="value${found ? ' found' : ''}">${value}</span>
+                </div>
+            `).join('')}
+            <div class="compare-heading">after</div>
+            <div class="row">
+                <label>file size</label>
+                <span class="value">${formatBytes(cleanedSize)}</span>
+            </div>
+            <div class="row">
+                <label>metadata</label>
+                <span class="value">removed</span>
+            </div>
+        `;
+        compare.classList.add('visible');
+    }
+</script>
+</body>
+</html>
