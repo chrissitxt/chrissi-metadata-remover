@@ -45,6 +45,26 @@
         scrollbar-gutter: stable;
     }
 
+    *::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    *::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        background: var(--glass-border);
+        border-radius: 10px;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+        background: var(--sub);
+        opacity: 0.3;
+        border-radius: 10px;
+    }
+
     * {
         margin: 0;
         padding: 0;
@@ -57,10 +77,15 @@
         color: var(--accent);
         min-height: 100vh;
         font-weight: var(--weight-body);
+        cursor: default;
     }
 
     ::selection {
         background: var(--highlight);
+    }
+
+    a {
+        color: inherit;
     }
 
     .glass {
@@ -71,9 +96,44 @@
     }
 
     .page {
+        position: relative;
+        z-index: 1;
         max-width: 480px;
         margin: 0 auto;
         padding: clamp(28px, 6vw, 56px) clamp(20px, 4vw, 40px);
+    }
+
+    /* site-wide subtle starfield background */
+    .starfield {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .star {
+        position: absolute;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: star-drift linear infinite alternate, star-twinkle ease-in-out infinite;
+    }
+
+    @keyframes star-drift {
+        from { transform: translate(0, 0); }
+        to { transform: translate(var(--drift-x, 20vw), var(--drift-y, 20vh)); }
+    }
+
+    @keyframes star-twinkle {
+        0%, 100% { opacity: var(--star-min, 0.1); }
+        50% { opacity: var(--star-max, 0.4); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .star {
+            animation: none;
+            opacity: 0.2;
+        }
     }
 
     .page-title {
@@ -598,6 +658,8 @@
 </head>
 <body>
 
+<div class="starfield" id="starfield"></div>
+
 <div class="page">
     <h1 class="page-title">chrissi's metadata remover</h1>
 
@@ -1108,6 +1170,36 @@
         `;
         compare.classList.add('visible');
     }
+
+    // starfield background
+    (function () {
+        const layer = document.getElementById('starfield');
+        if (!layer) return;
+
+        const count = 40;
+
+        for (let i = 0; i < count; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+
+            const size = 1 + Math.random() * 2.5;
+            const driftDuration = 40 + Math.random() * 40;
+            const twinkleDuration = 3 + Math.random() * 4;
+
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.top = Math.random() * 100 + 'vh';
+            star.style.setProperty('--drift-x', (Math.random() * 50 - 25).toFixed(1) + 'vw');
+            star.style.setProperty('--drift-y', (Math.random() * 50 - 25).toFixed(1) + 'vh');
+            star.style.setProperty('--star-min', (0.05 + Math.random() * 0.1).toFixed(2));
+            star.style.setProperty('--star-max', (0.25 + Math.random() * 0.35).toFixed(2));
+            star.style.animationDuration = `${driftDuration.toFixed(1)}s, ${twinkleDuration.toFixed(1)}s`;
+            star.style.animationDelay = `${(Math.random() * -driftDuration).toFixed(1)}s, ${(Math.random() * -twinkleDuration).toFixed(1)}s`;
+
+            layer.appendChild(star);
+        }
+    })();
 </script>
 </body>
 </html>
