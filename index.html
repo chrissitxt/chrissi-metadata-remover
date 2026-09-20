@@ -703,7 +703,7 @@
     <div class="faq">
         <div class="faq-item glass">
             <button class="faq-question" type="button" aria-expanded="false">
-                how it works
+                how does it work?
                 <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M6 15l6 -6l6 6" /></svg>
             </button>
             <div class="faq-answer-wrap">
@@ -712,6 +712,20 @@
                         just drop your files in, or click to browse. everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. metadata is stripped: camera info, gps location, and timestamps are removed, while the actual image content stays byte-for-byte untouched. each cleaned file downloads individually as soon as it's done.
                         <br><br>
                         right now this only supports jpeg, png, and webp images, up to 8 files at a time, 100mb each.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-item glass">
+            <button class="faq-question" type="button" aria-expanded="false">
+                why is there a limit at all?
+                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M6 15l6 -6l6 6" /></svg>
+            </button>
+            <div class="faq-answer-wrap">
+                <div class="faq-answer-inner">
+                    <div class="faq-answer">
+                        fair question, since everything runs locally there's no server cost or bandwidth to protect. the limit is about the browser itself, not about permission. every file gets held fully in memory as raw bytes while it's processed, so a large batch of huge files can genuinely slow a phone or an older laptop down. 8 files and 100mb each is just a comfortable ceiling that keeps things fast and predictable, not a hard technical wall.
                     </div>
                 </div>
             </div>
