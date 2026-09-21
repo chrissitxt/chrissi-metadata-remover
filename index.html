@@ -338,6 +338,16 @@
         flex-shrink: 0;
     }
 
+    .review-badge {
+        font-size: 12px;
+        color: var(--sub);
+        flex-shrink: 0;
+    }
+
+    .review-badge.found {
+        color: var(--accent);
+    }
+
     .review-remove {
         width: 20px;
         height: 20px;
@@ -680,6 +690,7 @@
     <div class="review glass" id="review">
         <div class="review-summary" id="reviewSummary"></div>
         <div class="file-rows" id="reviewRows"></div>
+        <div class="compare" id="reviewPreview"></div>
         <button id="addMoreBtn" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
             add more files
@@ -791,6 +802,18 @@
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
+    const reviewPreview = document.getElementById('reviewPreview');
+    const exifCache = new Map();
+
+    function getExifFor(file) {
+        if (exifCache.has(file)) return exifCache.get(file);
+        const promise = file.type === 'image/jpeg'
+            ? file.arrayBuffer().then(buffer => readExif(buffer) || {})
+            : Promise.resolve({});
+        exifCache.set(file, promise);
+        return promise;
+    }
+
     function renderReview() {
         if (!pendingFiles.length) {
             review.classList.remove('visible');
@@ -800,6 +823,7 @@
 
         dropzone.style.display = 'none';
         review.classList.add('visible');
+        reviewPreview.classList.remove('visible');
 
         const totalSize = pendingFiles.reduce((sum, f) => sum + f.size, 0);
         reviewSummary.textContent = `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} · ${formatBytes(totalSize)} total`;
@@ -812,6 +836,7 @@
                 <img class="file-thumb" alt="">
                 <span class="file-name"></span>
                 <span class="review-size"></span>
+                <span class="review-badge"></span>
                 <div class="review-remove" role="button" aria-label="remove file">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
                 </div>
@@ -823,8 +848,57 @@
                 pendingFiles.splice(index, 1);
                 renderReview();
             });
+
+            const badge = row.querySelector('.review-badge');
+            if (file.type === 'image/jpeg') {
+                badge.textContent = 'checking…';
+                getExifFor(file).then(exif => {
+                    const hasMeta = !!(exif.make || exif.model || exif.gps || exif.dateTime);
+                    badge.textContent = hasMeta ? 'metadata found' : 'clean';
+                    badge.classList.toggle('found', hasMeta);
+                    if (pendingFiles.length === 1 && pendingFiles[0] === file) {
+                        renderReviewPreview(file, exif);
+                    }
+                });
+            }
+
             reviewRows.appendChild(row);
         });
+
+        if (pendingFiles.length === 1 && pendingFiles[0].type !== 'image/jpeg') {
+            renderReviewPreview(pendingFiles[0], {});
+        }
+    }
+
+    function renderReviewPreview(file, exif) {
+        if (file.type !== 'image/jpeg') {
+            reviewPreview.innerHTML = `
+                <div class="compare-heading">what's inside this file</div>
+                <div class="row">
+                    <label>preview</label>
+                    <span class="value">not available for this format yet</span>
+                </div>
+            `;
+            reviewPreview.classList.add('visible');
+            return;
+        }
+
+        const rows = [
+            ['camera', exif.make || exif.model ? [exif.make, exif.model].filter(Boolean).join(' ') : 'not found', !!(exif.make || exif.model)],
+            ['gps location', exif.gps ? 'found' : 'not found', !!exif.gps],
+            ['date taken', exif.dateTime || 'not found', !!exif.dateTime]
+        ];
+
+        reviewPreview.innerHTML = `
+            <div class="compare-heading">what's inside this file</div>
+            ${rows.map(([label, value, found]) => `
+                <div class="row">
+                    <label>${label}</label>
+                    <span class="value${found ? ' found' : ''}">${value}</span>
+                </div>
+            `).join('')}
+        `;
+        reviewPreview.classList.add('visible');
     }
 
     function addFiles(newFiles) {
