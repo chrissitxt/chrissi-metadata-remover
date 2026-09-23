@@ -115,7 +115,7 @@
     .star {
         position: absolute;
         border-radius: 50%;
-        background: var(--accent);
+        background: var(--sub);
         animation: star-drift linear infinite alternate, star-twinkle ease-in-out infinite;
     }
 
@@ -127,13 +127,6 @@
     @keyframes star-twinkle {
         0%, 100% { opacity: var(--star-min, 0.1); }
         50% { opacity: var(--star-max, 0.4); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .star {
-            animation: none;
-            opacity: 0.2;
-        }
     }
 
     .page-title {
@@ -306,10 +299,6 @@
         100% { opacity: 1; transform: translateY(0); }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        .file-name.updated { animation: none; }
-    }
-
     /* review, shown before processing starts */
     .review {
         border-radius: var(--border-radius-lg);
@@ -336,6 +325,16 @@
         font-size: 12px;
         color: var(--sub);
         flex-shrink: 0;
+    }
+
+    .review-badge {
+        font-size: 12px;
+        color: var(--sub);
+        flex-shrink: 0;
+    }
+
+    .review-badge.found {
+        color: var(--accent);
     }
 
     .review-remove {
@@ -517,10 +516,6 @@
         to { transform: rotate(360deg); }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        .spinner-ring { animation: none; border-top-color: var(--glass-border); }
-    }
-
     .checkmark {
         width: 16px;
         height: 16px;
@@ -532,10 +527,6 @@
         0% { transform: scale(0.5); opacity: 0; }
         60% { transform: scale(1.15); opacity: 1; }
         100% { transform: scale(1); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .checkmark { animation: none; }
     }
 
     .progress-ring {
@@ -564,10 +555,6 @@
 
     @keyframes ring-deplete {
         to { stroke-dashoffset: 75.4; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .progress-ring .progress-fill { animation: none; stroke-dashoffset: 75.4; }
     }
 
     /* faq */
@@ -617,10 +604,6 @@
 
     .faq-item.open .faq-answer-wrap {
         grid-template-rows: 1fr;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .faq-answer-wrap { transition: none; }
     }
 
     .faq-answer-inner {
@@ -680,6 +663,7 @@
     <div class="review glass" id="review">
         <div class="review-summary" id="reviewSummary"></div>
         <div class="file-rows" id="reviewRows"></div>
+        <div class="compare" id="reviewPreview"></div>
         <button id="addMoreBtn" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
             add more files
@@ -791,6 +775,18 @@
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
+    const reviewPreview = document.getElementById('reviewPreview');
+    const exifCache = new Map();
+
+    function getExifFor(file) {
+        if (exifCache.has(file)) return exifCache.get(file);
+        const promise = file.type === 'image/jpeg'
+            ? file.arrayBuffer().then(buffer => readExif(buffer) || {})
+            : Promise.resolve({});
+        exifCache.set(file, promise);
+        return promise;
+    }
+
     function renderReview() {
         if (!pendingFiles.length) {
             review.classList.remove('visible');
@@ -800,6 +796,7 @@
 
         dropzone.style.display = 'none';
         review.classList.add('visible');
+        reviewPreview.classList.remove('visible');
 
         const totalSize = pendingFiles.reduce((sum, f) => sum + f.size, 0);
         reviewSummary.textContent = `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} · ${formatBytes(totalSize)} total`;
@@ -812,6 +809,7 @@
                 <img class="file-thumb" alt="">
                 <span class="file-name"></span>
                 <span class="review-size"></span>
+                <span class="review-badge"></span>
                 <div class="review-remove" role="button" aria-label="remove file">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
                 </div>
@@ -823,8 +821,57 @@
                 pendingFiles.splice(index, 1);
                 renderReview();
             });
+
+            const badge = row.querySelector('.review-badge');
+            if (file.type === 'image/jpeg') {
+                badge.textContent = 'checking…';
+                getExifFor(file).then(exif => {
+                    const hasMeta = !!(exif.make || exif.model || exif.gps || exif.dateTime);
+                    badge.textContent = hasMeta ? 'metadata found' : 'clean';
+                    badge.classList.toggle('found', hasMeta);
+                    if (pendingFiles.length === 1 && pendingFiles[0] === file) {
+                        renderReviewPreview(file, exif);
+                    }
+                });
+            }
+
             reviewRows.appendChild(row);
         });
+
+        if (pendingFiles.length === 1 && pendingFiles[0].type !== 'image/jpeg') {
+            renderReviewPreview(pendingFiles[0], {});
+        }
+    }
+
+    function renderReviewPreview(file, exif) {
+        if (file.type !== 'image/jpeg') {
+            reviewPreview.innerHTML = `
+                <div class="compare-heading">what's inside this file</div>
+                <div class="row">
+                    <label>preview</label>
+                    <span class="value">not available for this format yet</span>
+                </div>
+            `;
+            reviewPreview.classList.add('visible');
+            return;
+        }
+
+        const rows = [
+            ['camera', exif.make || exif.model ? [exif.make, exif.model].filter(Boolean).join(' ') : 'not found', !!(exif.make || exif.model)],
+            ['gps location', exif.gps ? 'found' : 'not found', !!exif.gps],
+            ['date taken', exif.dateTime || 'not found', !!exif.dateTime]
+        ];
+
+        reviewPreview.innerHTML = `
+            <div class="compare-heading">what's inside this file</div>
+            ${rows.map(([label, value, found]) => `
+                <div class="row">
+                    <label>${label}</label>
+                    <span class="value${found ? ' found' : ''}">${value}</span>
+                </div>
+            `).join('')}
+        `;
+        reviewPreview.classList.add('visible');
     }
 
     function addFiles(newFiles) {
@@ -879,7 +926,7 @@
         fileInput.value = '';
     });
 
-    // minimal EXIF reader, just enough to read the orientation tag
+    // tiny exif reader, only grabs what the preview and orientation need
     function readExif(buffer) {
         const view = new DataView(buffer);
         if (view.getUint16(0, false) !== 0xFFD8) return null;
@@ -938,10 +985,8 @@
         ]);
     }
 
-    // strips APPn/COM segments (exif, xmp, comments, thumbnails) while leaving the
-    // compressed image data byte-for-byte untouched. if the original had an
-    // orientation tag, a minimal replacement segment carrying only that tag is
-    // re-inserted so the image still displays the right way up.
+    // drops exif/xmp/comment segments, image data stays byte-for-byte the same.
+    // orientation gets re-added on its own so photos don't end up sideways
     function stripJpegParts(buffer, orientation) {
         const bytes = new Uint8Array(buffer);
         const view = new DataView(buffer);
@@ -963,8 +1008,7 @@
             }
 
             if (marker === 0xDA) {
-                // start of scan: copy the scan header plus every remaining byte
-                // (entropy-coded data, any further scans, EOI) completely as-is
+                // start of scan, everything from here on is image data, copy as-is
                 parts.push(bytes.subarray(offset, bytes.length));
                 break;
             }
@@ -986,8 +1030,7 @@
         return parts;
     }
 
-    // strips ancillary text/time/exif chunks while leaving every chunk needed
-    // to render the image (IHDR, PLTE, IDAT, IEND, color profile) untouched.
+    // drops text/time/exif chunks, everything needed to render stays
     function stripPngParts(buffer) {
         const bytes = new Uint8Array(buffer);
         const view = new DataView(buffer);
@@ -1009,8 +1052,7 @@
         return parts;
     }
 
-    // strips EXIF/XMP RIFF chunks, keeps the actual VP8/VP8L image data and
-    // alpha/animation chunks untouched, then rewrites the RIFF size field.
+    // drops exif/xmp chunks, then fixes the riff size header
     function stripWebpParts(buffer) {
         const bytes = new Uint8Array(buffer);
         const view = new DataView(buffer);
