@@ -88,6 +88,10 @@
         color: inherit;
     }
 
+    [hidden] {
+        display: none !important;
+    }
+
     .glass {
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
@@ -241,13 +245,9 @@
         border-radius: var(--border-radius-lg);
         padding: var(--spacing-3);
         margin-bottom: var(--spacing-4);
-        display: none;
+        display: flex;
         flex-direction: column;
         animation: card-in 0.3s ease;
-    }
-
-    .batch.visible {
-        display: flex;
     }
 
     @keyframes card-in {
@@ -304,13 +304,9 @@
         border-radius: var(--border-radius-lg);
         padding: var(--spacing-3);
         margin-bottom: var(--spacing-4);
-        display: none;
+        display: flex;
         flex-direction: column;
         animation: card-in 0.3s ease;
-    }
-
-    .review.visible {
-        display: flex;
     }
 
     .review-summary {
@@ -421,11 +417,6 @@
     }
 
     .compare {
-        display: none;
-    }
-
-    .compare.visible {
-        display: block;
         margin-top: var(--spacing);
         padding-top: var(--spacing-2);
         border-top: 1px solid var(--glass-border);
@@ -462,6 +453,21 @@
 
     .value.found {
         color: var(--accent);
+    }
+
+    .value {
+        overflow-wrap: anywhere;
+    }
+
+    .file-name.failed {
+        color: var(--sub);
+    }
+
+    .notice {
+        margin: calc(var(--spacing-3) * -1) 0 var(--spacing-3);
+        text-align: center;
+        font-size: 13px;
+        color: var(--sub);
     }
 
     .status-icon.skippable {
@@ -516,11 +522,16 @@
         to { transform: rotate(360deg); }
     }
 
-    .checkmark {
+    .status-done,
+    .status-failed {
         width: 16px;
         height: 16px;
         color: var(--accent);
         animation: check-pop 0.3s ease;
+    }
+
+    .status-failed {
+        color: var(--sub);
     }
 
     @keyframes check-pop {
@@ -654,26 +665,28 @@
     </div>
 
     <div class="dropzone glass" id="dropzone">
-        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple>
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /><path d="M12 11v6" /><path d="M9.5 13.5l2.5 -2.5l2.5 2.5" /></svg>
         <span class="dropzone-label">drop images here, or click to browse</span>
         <span class="dropzone-sub">jpeg, jpg, png, webp · up to 8 files, 100mb each</span>
     </div>
 
-    <div class="review glass" id="review">
+    <p class="notice" id="notice" hidden></p>
+
+    <div class="review glass" id="review" hidden>
         <div class="review-summary" id="reviewSummary"></div>
         <div class="file-rows" id="reviewRows"></div>
-        <div class="compare" id="reviewPreview"></div>
+        <div class="compare" id="reviewPreview" hidden></div>
         <button id="addMoreBtn" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
             add more files
         </button>
-        <button id="processBtn">remove metadata</button>
+        <button id="processBtn" type="button">remove metadata</button>
     </div>
 
-    <div class="batch glass" id="batch">
+    <div class="batch glass" id="batch" hidden>
         <div class="file-rows" id="fileRows"></div>
-        <div class="compare" id="compare"></div>
+        <div class="compare" id="compare" hidden></div>
         <div class="batch-footer">
             <span class="batch-footer-text" id="batchFooterText">removing metadata</span>
             <div class="status-icon" id="batchStatusIcon">
@@ -693,7 +706,7 @@
             <div class="faq-answer-wrap">
                 <div class="faq-answer-inner">
                     <div class="faq-answer">
-                        just drop your files in, or click to browse. everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. metadata is stripped: camera info, gps location, and timestamps are removed, while the actual image content stays byte-for-byte untouched. each cleaned file downloads individually as soon as it's done.
+                        just drop your files in, or click to browse. everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. metadata is stripped: camera info, gps location, timestamps and everything else stored alongside the image are removed, while the actual image content stays byte-for-byte untouched. color profiles are kept, so colors look exactly the same. each cleaned file downloads individually as soon as it's done.
                         <br><br>
                         right now this only supports jpeg, png, and webp images, up to 8 files at a time, 100mb each.
                     </div>
@@ -722,11 +735,13 @@
 <script>
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
+    const notice = document.getElementById('notice');
     const review = document.getElementById('review');
     const reviewSummary = document.getElementById('reviewSummary');
     const reviewRows = document.getElementById('reviewRows');
-    const processBtn = document.getElementById('processBtn');
+    const reviewPreview = document.getElementById('reviewPreview');
     const addMoreBtn = document.getElementById('addMoreBtn');
+    const processBtn = document.getElementById('processBtn');
     const batch = document.getElementById('batch');
     const fileRows = document.getElementById('fileRows');
     const compare = document.getElementById('compare');
@@ -734,17 +749,41 @@
     const batchStatusIcon = document.getElementById('batchStatusIcon');
     const randomizeFilename = document.getElementById('randomizeFilename');
 
-    let pendingFiles = [];
-    let randomizeFilenameOn = false;
-
     const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const EXTENSION_TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+    const OUTPUT_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
     const MAX_FILES = 8;
     const MAX_SIZE = 100 * 1024 * 1024;
+    const PROCESS_DELAY = 700;
+    // keep in sync with ring-deplete in the css
+    const DISMISS_DELAY = 20000;
+    const NOTICE_DELAY = 5000;
+
+    const CHECK_ICON = '<svg class="status-done" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l5 5l10 -10" /></svg>';
+    const FAIL_ICON = '<svg class="status-failed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>';
+    const CLOSE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>';
+    const RING = '<svg class="progress-ring" viewBox="0 0 28 28"><circle class="progress-track" cx="14" cy="14" r="12" /><circle class="progress-fill" cx="14" cy="14" r="12" /></svg>';
+
+    let pendingFiles = [];
+    let randomizeFilenameOn = false;
+    let noticeTimeout = null;
+    const infoCache = new Map();
+    const thumbUrls = new Map();
 
     randomizeFilename.addEventListener('click', () => {
         randomizeFilename.classList.toggle('on');
         randomizeFilenameOn = randomizeFilename.classList.contains('on');
     });
+
+    document.querySelectorAll('.faq-question').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = btn.closest('.faq-item');
+            const isOpen = item.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen);
+        });
+    });
+
+    /* helpers */
 
     function randomFilename(length = 12) {
         const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -755,339 +794,27 @@
         return result;
     }
 
-    document.querySelectorAll('.faq-question').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const item = btn.closest('.faq-item');
-            const isOpen = item.classList.toggle('open');
-            btn.setAttribute('aria-expanded', isOpen);
-        });
-    });
-
-    function getValidFiles(fileList) {
-        return Array.from(fileList)
-            .filter(f => ACCEPTED_TYPES.includes(f.type) && f.size <= MAX_SIZE)
-            .slice(0, MAX_FILES);
-    }
-
     function formatBytes(bytes) {
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    const reviewPreview = document.getElementById('reviewPreview');
-    const exifCache = new Map();
-
-    function getExifFor(file) {
-        if (exifCache.has(file)) return exifCache.get(file);
-        const promise = file.type === 'image/jpeg'
-            ? file.arrayBuffer().then(buffer => readExif(buffer) || {})
-            : Promise.resolve({});
-        exifCache.set(file, promise);
-        return promise;
+    // some systems hand over an empty file type, the extension is the fallback
+    function fileKind(file) {
+        if (ACCEPTED_TYPES.includes(file.type)) return file.type;
+        return EXTENSION_TYPES[file.name.split('.').pop().toLowerCase()] || null;
     }
 
-    function renderReview() {
-        if (!pendingFiles.length) {
-            review.classList.remove('visible');
-            dropzone.style.display = 'flex';
-            return;
-        }
-
-        dropzone.style.display = 'none';
-        review.classList.add('visible');
-        reviewPreview.classList.remove('visible');
-
-        const totalSize = pendingFiles.reduce((sum, f) => sum + f.size, 0);
-        reviewSummary.textContent = `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} · ${formatBytes(totalSize)} total`;
-
-        reviewRows.innerHTML = '';
-        pendingFiles.forEach((file, index) => {
-            const row = document.createElement('div');
-            row.className = 'file-row';
-            row.innerHTML = `
-                <img class="file-thumb" alt="">
-                <span class="file-name"></span>
-                <span class="review-size"></span>
-                <span class="review-badge"></span>
-                <div class="review-remove" role="button" aria-label="remove file">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
-                </div>
-            `;
-            row.querySelector('.file-thumb').src = URL.createObjectURL(file);
-            row.querySelector('.file-name').textContent = file.name;
-            row.querySelector('.review-size').textContent = formatBytes(file.size);
-            row.querySelector('.review-remove').addEventListener('click', () => {
-                pendingFiles.splice(index, 1);
-                renderReview();
-            });
-
-            const badge = row.querySelector('.review-badge');
-            if (file.type === 'image/jpeg') {
-                badge.textContent = 'checking…';
-                getExifFor(file).then(exif => {
-                    const hasMeta = !!(exif.make || exif.model || exif.gps || exif.dateTime);
-                    badge.textContent = hasMeta ? 'metadata found' : 'clean';
-                    badge.classList.toggle('found', hasMeta);
-                    if (pendingFiles.length === 1 && pendingFiles[0] === file) {
-                        renderReviewPreview(file, exif);
-                    }
-                });
-            }
-
-            reviewRows.appendChild(row);
-        });
-
-        if (pendingFiles.length === 1 && pendingFiles[0].type !== 'image/jpeg') {
-            renderReviewPreview(pendingFiles[0], {});
-        }
+    function thumbFor(file) {
+        if (!thumbUrls.has(file)) thumbUrls.set(file, URL.createObjectURL(file));
+        return thumbUrls.get(file);
     }
 
-    function renderReviewPreview(file, exif) {
-        if (file.type !== 'image/jpeg') {
-            reviewPreview.innerHTML = `
-                <div class="compare-heading">what's inside this file</div>
-                <div class="row">
-                    <label>preview</label>
-                    <span class="value">not available for this format yet</span>
-                </div>
-            `;
-            reviewPreview.classList.add('visible');
-            return;
-        }
-
-        const rows = [
-            ['camera', exif.make || exif.model ? [exif.make, exif.model].filter(Boolean).join(' ') : 'not found', !!(exif.make || exif.model)],
-            ['gps location', exif.gps ? 'found' : 'not found', !!exif.gps],
-            ['date taken', exif.dateTime || 'not found', !!exif.dateTime]
-        ];
-
-        reviewPreview.innerHTML = `
-            <div class="compare-heading">what's inside this file</div>
-            ${rows.map(([label, value, found]) => `
-                <div class="row">
-                    <label>${label}</label>
-                    <span class="value${found ? ' found' : ''}">${value}</span>
-                </div>
-            `).join('')}
-        `;
-        reviewPreview.classList.add('visible');
-    }
-
-    function addFiles(newFiles) {
-        const room = MAX_FILES - pendingFiles.length;
-        pendingFiles = pendingFiles.concat(newFiles.slice(0, Math.max(room, 0)));
-        renderReview();
-    }
-
-    addMoreBtn.addEventListener('click', () => fileInput.click());
-
-    ['dragenter', 'dragover'].forEach(evt => {
-        review.addEventListener(evt, e => e.preventDefault());
-    });
-
-    review.addEventListener('drop', e => {
-        e.preventDefault();
-        const files = getValidFiles(e.dataTransfer.files);
-        if (files.length) addFiles(files);
-    });
-
-    processBtn.addEventListener('click', () => {
-        const files = pendingFiles;
-        pendingFiles = [];
-        review.classList.remove('visible');
-        handleFiles(files);
-    });
-
-    dropzone.addEventListener('click', () => fileInput.click());
-
-    ['dragenter', 'dragover'].forEach(evt => {
-        dropzone.addEventListener(evt, e => {
-            e.preventDefault();
-            dropzone.classList.add('drag-over');
-        });
-    });
-
-    ['dragleave', 'drop'].forEach(evt => {
-        dropzone.addEventListener(evt, e => {
-            e.preventDefault();
-            dropzone.classList.remove('drag-over');
-        });
-    });
-
-    dropzone.addEventListener('drop', e => {
-        const files = getValidFiles(e.dataTransfer.files);
-        if (files.length) addFiles(files);
-    });
-
-    fileInput.addEventListener('change', () => {
-        const files = getValidFiles(fileInput.files);
-        if (files.length) addFiles(files);
-        fileInput.value = '';
-    });
-
-    // tiny exif reader, only grabs what the preview and orientation need
-    function readExif(buffer) {
-        const view = new DataView(buffer);
-        if (view.getUint16(0, false) !== 0xFFD8) return null;
-        let offset = 2;
-        while (offset < view.byteLength - 4) {
-            const marker = view.getUint16(offset, false);
-            if (marker === 0xFFE1 && view.getUint32(offset + 4, false) === 0x45786966) {
-                return parseTiff(view, offset + 10);
-            }
-            if ((marker & 0xFF00) !== 0xFF00) break;
-            offset += 2 + view.getUint16(offset + 2, false);
-        }
-        return null;
-    }
-
-    function parseTiff(view, tiffStart) {
-        const little = view.getUint16(tiffStart, false) === 0x4949;
-        const ifdOffset = view.getUint32(tiffStart + 4, little);
-        const entries = view.getUint16(tiffStart + ifdOffset, little);
-        const tags = { 0x010F: 'make', 0x0110: 'model', 0x0112: 'orientation', 0x0132: 'dateTime', 0x8825: 'gps' };
-        const result = {};
-        for (let i = 0; i < entries; i++) {
-            const entryOffset = tiffStart + ifdOffset + 2 + i * 12;
-            const tag = view.getUint16(entryOffset, little);
-            const name = tags[tag];
-            if (!name) continue;
-            const type = view.getUint16(entryOffset + 2, little);
-            const count = view.getUint32(entryOffset + 4, little);
-            const valueOffset = entryOffset + 8;
-            if (name === 'orientation') {
-                result.orientation = view.getUint16(valueOffset, little);
-            } else if (name === 'gps') {
-                result.gps = true;
-            } else if (type === 2) {
-                const strStart = count > 4 ? tiffStart + view.getUint32(valueOffset, little) : valueOffset;
-                let str = '';
-                for (let j = 0; j < count - 1; j++) {
-                    const c = view.getUint8(strStart + j);
-                    if (c === 0) break;
-                    str += String.fromCharCode(c);
-                }
-                result[name] = str.trim();
-            }
-        }
-        return result;
-    }
-
-    function buildMinimalOrientationExif(orientation) {
-        return new Uint8Array([
-            0xFF, 0xE1, 0x00, 0x22,
-            0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
-            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
-            0x01, 0x00,
-            0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, orientation & 0xFF, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00
-        ]);
-    }
-
-    // drops exif/xmp/comment segments, image data stays byte-for-byte the same.
-    // orientation gets re-added on its own so photos don't end up sideways
-    function stripJpegParts(buffer, orientation) {
-        const bytes = new Uint8Array(buffer);
-        const view = new DataView(buffer);
-        if (bytes.length < 4 || view.getUint16(0, false) !== 0xFFD8) return [buffer];
-
-        const parts = [bytes.subarray(0, 2)];
-        if (orientation && orientation !== 1) {
-            parts.push(buildMinimalOrientationExif(orientation));
-        }
-
-        let offset = 2;
-        while (offset < bytes.length - 1) {
-            if (bytes[offset] !== 0xFF) { offset++; continue; }
-            const marker = bytes[offset + 1];
-
-            if (marker === 0xD9) {
-                parts.push(bytes.subarray(offset, offset + 2));
-                break;
-            }
-
-            if (marker === 0xDA) {
-                // start of scan, everything from here on is image data, copy as-is
-                parts.push(bytes.subarray(offset, bytes.length));
-                break;
-            }
-
-            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) {
-                parts.push(bytes.subarray(offset, offset + 2));
-                offset += 2;
-                continue;
-            }
-
-            const segLength = view.getUint16(offset + 2, false);
-            const isMetadataSegment = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
-            if (!isMetadataSegment) {
-                parts.push(bytes.subarray(offset, offset + 2 + segLength));
-            }
-            offset += 2 + segLength;
-        }
-
-        return parts;
-    }
-
-    // drops text/time/exif chunks, everything needed to render stays
-    function stripPngParts(buffer) {
-        const bytes = new Uint8Array(buffer);
-        const view = new DataView(buffer);
-        const stripTypes = new Set(['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME']);
-        const parts = [bytes.subarray(0, 8)];
-
-        let offset = 8;
-        while (offset < bytes.length) {
-            const length = view.getUint32(offset, false);
-            const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
-            const chunkTotal = 12 + length;
-            if (!stripTypes.has(type)) {
-                parts.push(bytes.subarray(offset, offset + chunkTotal));
-            }
-            offset += chunkTotal;
-            if (type === 'IEND') break;
-        }
-
-        return parts;
-    }
-
-    // drops exif/xmp chunks, then fixes the riff size header
-    function stripWebpParts(buffer) {
-        const bytes = new Uint8Array(buffer);
-        const view = new DataView(buffer);
-        if (bytes.length < 12 || String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]) !== 'RIFF') return [buffer];
-
-        const stripTypes = new Set(['EXIF', 'XMP ']);
-        const chunkParts = [];
-        let offset = 12;
-        while (offset < bytes.length) {
-            const fourcc = String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
-            const size = view.getUint32(offset + 4, true);
-            const chunkTotal = 8 + size + (size % 2);
-            if (!stripTypes.has(fourcc)) {
-                chunkParts.push(bytes.subarray(offset, offset + chunkTotal));
-            }
-            offset += chunkTotal;
-        }
-
-        const totalSize = chunkParts.reduce((sum, p) => sum + p.length, 0) + 4;
-        const sizeField = new Uint8Array(4);
-        new DataView(sizeField.buffer).setUint32(0, totalSize, true);
-
-        return [
-            new TextEncoder().encode('RIFF'),
-            sizeField,
-            new TextEncoder().encode('WEBP'),
-            ...chunkParts
-        ];
-    }
-
-    function stripMetadataParts(type, buffer, orientation) {
-        if (type === 'image/jpeg') return stripJpegParts(buffer, orientation);
-        if (type === 'image/png') return stripPngParts(buffer);
-        if (type === 'image/webp') return stripWebpParts(buffer);
-        return [buffer];
+    function releaseFile(file) {
+        if (thumbUrls.has(file)) URL.revokeObjectURL(thumbUrls.get(file));
+        thumbUrls.delete(file);
+        infoCache.delete(file);
     }
 
     function wait(ms) {
@@ -1106,19 +833,440 @@
         });
     }
 
-    async function processImage(file) {
-        const buffer = await file.arrayBuffer();
-        const exif = file.type === 'image/jpeg' ? (readExif(buffer) || {}) : {};
+    function showNotice(text) {
+        notice.textContent = text;
+        notice.hidden = false;
+        clearTimeout(noticeTimeout);
+        noticeTimeout = setTimeout(() => { notice.hidden = true; }, NOTICE_DELAY);
+    }
 
-        const [parts] = await Promise.all([
-            Promise.resolve(stripMetadataParts(file.type, buffer, exif.orientation)),
-            wait(700)
+    /* metadata inspection */
+
+    function ascii(bytes, start, length) {
+        let text = '';
+        for (let i = start; i < Math.min(start + length, bytes.length); i++) text += String.fromCharCode(bytes[i]);
+        return text;
+    }
+
+    const TYPE_SIZES = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+
+    // maps tag -> entry position for one tiff directory
+    function readIfd(view, tiffStart, offset, little) {
+        const entries = {};
+        const count = view.getUint16(tiffStart + offset, little);
+        for (let i = 0; i < count; i++) {
+            const at = tiffStart + offset + 2 + i * 12;
+            entries[view.getUint16(at, little)] = at;
+        }
+        return entries;
+    }
+
+    function readTag(view, tiffStart, little, entry) {
+        if (entry === undefined) return undefined;
+        const type = view.getUint16(entry + 2, little);
+        const count = view.getUint32(entry + 4, little);
+        const at = (TYPE_SIZES[type] || 1) * count > 4 ? tiffStart + view.getUint32(entry + 8, little) : entry + 8;
+
+        if (type === 2) {
+            let text = '';
+            for (let i = 0; i < Math.min(count, 256); i++) {
+                const c = view.getUint8(at + i);
+                if (c === 0) break;
+                text += String.fromCharCode(c);
+            }
+            return text.trim();
+        }
+        if (type === 3) return view.getUint16(at, little);
+        if (type === 4) return view.getUint32(at, little);
+        if (type === 5) {
+            return Array.from({ length: Math.min(count, 8) }, (_, i) =>
+                view.getUint32(at + i * 8, little) / (view.getUint32(at + i * 8 + 4, little) || 1));
+        }
+        return undefined;
+    }
+
+    // degree/minute/second rationals into plain coordinates, or just "found" if they're empty
+    function formatGps(ifd, read) {
+        const toDegrees = (dms, ref) => Array.isArray(dms) && dms.length >= 3
+            ? (dms[0] + dms[1] / 60 + dms[2] / 3600) * (ref === 'S' || ref === 'W' ? -1 : 1)
+            : null;
+        const lat = toDegrees(read(ifd, 2), read(ifd, 1));
+        const lon = toDegrees(read(ifd, 4), read(ifd, 3));
+        return lat !== null && lon !== null && (lat || lon) ? `${lat.toFixed(5)}, ${lon.toFixed(5)}` : 'found';
+    }
+
+    // only the tags the preview shows, https://exiftool.org/TagNames/EXIF.html
+    function parseTiff(view, tiffStart) {
+        const little = view.getUint16(tiffStart) === 0x4949;
+        const read = (ifd, tag) => {
+            try { return readTag(view, tiffStart, little, ifd[tag]); } catch { return undefined; }
+        };
+        const subIfd = (ifd, tag) => {
+            const pointer = read(ifd, tag);
+            try { return pointer ? readIfd(view, tiffStart, pointer, little) : null; } catch { return null; }
+        };
+
+        const ifd0 = readIfd(view, tiffStart, view.getUint32(tiffStart + 4, little), little);
+        const exifIfd = subIfd(ifd0, 0x8769) || {};
+        const gpsIfd = subIfd(ifd0, 0x8825);
+        const date = read(exifIfd, 0x9003) || read(ifd0, 0x0132);
+
+        return {
+            make: read(ifd0, 0x010F),
+            model: read(ifd0, 0x0110),
+            orientation: read(ifd0, 0x0112),
+            dateTime: date ? date.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3') : undefined,
+            gps: gpsIfd ? formatGps(gpsIfd, read) : undefined
+        };
+    }
+
+    function addExif(info, view, start) {
+        info.other.push('exif details');
+        try {
+            Object.assign(info, parseTiff(view, start));
+        } catch {
+            // unreadable exif still gets removed, it just can't be previewed
+        }
+    }
+
+    function inspectJpeg(bytes, view, info) {
+        let offset = 2;
+        while (offset < bytes.length - 3) {
+            if (bytes[offset] !== 0xFF) { offset++; continue; }
+            const marker = bytes[offset + 1];
+            if (marker === 0xFF) { offset++; continue; }
+            if (marker === 0xDA) {
+                if (findJpegEnd(bytes, view, offset) < bytes.length - 16) info.other.push('trailing data');
+                return;
+            }
+            if (marker === 0xD9) return;
+            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) { offset += 2; continue; }
+
+            const data = offset + 4;
+            if (marker === 0xE1 && ascii(bytes, data, 6) === 'Exif\0\0') addExif(info, view, data + 6);
+            else if (marker === 0xE1 && ascii(bytes, data, 23) === 'http://ns.adobe.com/xap') info.other.push('xmp');
+            else if (marker === 0xE2 && ascii(bytes, data, 3) === 'MPF') info.other.push('extra images');
+            else if (marker === 0xED) info.other.push('iptc');
+            else if (marker === 0xFE) info.other.push('comment');
+            offset += 2 + view.getUint16(offset + 2);
+        }
+    }
+
+    function inspectPng(bytes, view, info) {
+        let offset = 8;
+        while (offset + 12 <= bytes.length) {
+            const type = ascii(bytes, offset + 4, 4);
+            const data = offset + 8;
+            if (type === 'eXIf') addExif(info, view, data);
+            else if (type === 'tIME') info.other.push('timestamp');
+            else if (type === 'iTXt' && ascii(bytes, data, 17) === 'XML:com.adobe.xmp') info.other.push('xmp');
+            else if (type === 'tEXt' || type === 'zTXt' || type === 'iTXt') info.other.push('text');
+            if (type === 'IEND') return;
+            offset += 12 + view.getUint32(offset);
+        }
+    }
+
+    function inspectWebp(bytes, view, info) {
+        const riffEnd = Math.min(bytes.length, 8 + view.getUint32(4, true));
+        let offset = 12;
+        while (offset + 8 <= riffEnd) {
+            const fourcc = ascii(bytes, offset, 4);
+            const size = view.getUint32(offset + 4, true);
+            const data = offset + 8;
+            if (fourcc === 'EXIF') addExif(info, view, ascii(bytes, data, 6) === 'Exif\0\0' ? data + 6 : data);
+            else if (fourcc === 'XMP ') info.other.push('xmp');
+            offset = data + size + (size % 2);
+        }
+    }
+
+    function inspectFile(buffer, kind) {
+        const info = { other: [] };
+        const bytes = new Uint8Array(buffer);
+        const view = new DataView(buffer);
+        try {
+            if (kind === 'image/jpeg') inspectJpeg(bytes, view, info);
+            else if (kind === 'image/png') inspectPng(bytes, view, info);
+            else if (kind === 'image/webp') inspectWebp(bytes, view, info);
+        } catch {
+            // odd or broken file, show whatever was found before it broke
+        }
+        return info;
+    }
+
+    function getInfoFor(file) {
+        if (!infoCache.has(file)) {
+            const promise = file.arrayBuffer()
+                .then(buffer => inspectFile(buffer, fileKind(file)))
+                .catch(() => ({ other: [] }));
+            infoCache.set(file, promise);
+        }
+        return infoCache.get(file);
+    }
+
+    function hasMetadata(info) {
+        return !!(info.make || info.model || info.gps || info.dateTime || info.other.length);
+    }
+
+    function metadataRows(info) {
+        const camera = info.make && info.model && info.model.startsWith(info.make)
+            ? info.model
+            : [info.make, info.model].filter(Boolean).join(' ');
+        const other = [...new Set(info.other)].join(', ');
+        return [
+            ['camera', camera || 'not found', !!camera],
+            ['gps location', info.gps || 'not found', !!info.gps],
+            ['date taken', info.dateTime || 'not found', !!info.dateTime],
+            ['other metadata', other || 'none', !!other]
+        ];
+    }
+
+    /* stripping */
+
+    // smallest valid exif block, holds nothing but the orientation
+    function buildMinimalOrientationExif(orientation) {
+        return new Uint8Array([
+            0xFF, 0xE1, 0x00, 0x22,
+            0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+            0x01, 0x00,
+            0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, orientation & 0xFF, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
         ]);
+    }
 
-        const blob = new Blob(parts, { type: file.type });
-        const ext = file.type === 'image/png' ? 'png' : (file.type === 'image/webp' ? 'webp' : 'jpg');
+    // color profile + adobe color info, needed for correct colors, nothing personal
+    function isRenderingSegment(bytes, marker, data) {
+        return (marker === 0xE2 && ascii(bytes, data, 11) === 'ICC_PROFILE')
+            || (marker === 0xEE && ascii(bytes, data, 5) === 'Adobe');
+    }
 
-        return { blob, ext, exif, originalSize: file.size };
+    // end of the main image, anything after it can carry its own metadata
+    function findJpegEnd(bytes, view, sos) {
+        let i = sos;
+        while (i < bytes.length - 3) {
+            i += 2 + view.getUint16(i + 2);
+            while (i < bytes.length - 1) {
+                const next = bytes[i + 1];
+                if (bytes[i] === 0xFF && next !== 0x00 && next !== 0xFF && !(next >= 0xD0 && next <= 0xD7)) break;
+                i++;
+            }
+            if (i >= bytes.length - 1) return bytes.length;
+            if (bytes[i + 1] === 0xD9) return i + 2;
+        }
+        return bytes.length;
+    }
+
+    // drops exif/xmp/comment segments, image data stays byte-for-byte the same.
+    // orientation gets re-added on its own so photos don't end up sideways
+    function stripJpegParts(buffer, orientation) {
+        const bytes = new Uint8Array(buffer);
+        const view = new DataView(buffer);
+        if (view.getUint16(0) !== 0xFFD8) throw new Error('not a jpeg');
+
+        const parts = [bytes.subarray(0, 2)];
+        if (orientation && orientation !== 1) parts.push(buildMinimalOrientationExif(orientation));
+
+        let offset = 2;
+        while (offset < bytes.length - 3) {
+            if (bytes[offset] !== 0xFF) { offset++; continue; }
+            const marker = bytes[offset + 1];
+            if (marker === 0xFF) { offset++; continue; }
+            if (marker === 0xDA) {
+                // start of scan, image data from here, copied as-is
+                parts.push(bytes.subarray(offset, findJpegEnd(bytes, view, offset)));
+                return parts;
+            }
+            if (marker === 0xD9) break;
+            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) {
+                parts.push(bytes.subarray(offset, offset + 2));
+                offset += 2;
+                continue;
+            }
+
+            const end = offset + 2 + view.getUint16(offset + 2);
+            const isMetadata = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
+            if (!isMetadata || isRenderingSegment(bytes, marker, offset + 4)) parts.push(bytes.subarray(offset, end));
+            offset = end;
+        }
+        throw new Error('no image data found');
+    }
+
+    const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    const PNG_STRIP = new Set(['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME']);
+
+    // drops text/time/exif chunks, everything needed to render stays
+    function stripPngParts(buffer) {
+        const bytes = new Uint8Array(buffer);
+        const view = new DataView(buffer);
+        if (!PNG_SIGNATURE.every((b, i) => bytes[i] === b)) throw new Error('not a png');
+
+        const parts = [bytes.subarray(0, 8)];
+        let offset = 8;
+        while (offset + 12 <= bytes.length) {
+            const type = ascii(bytes, offset + 4, 4);
+            const end = offset + 12 + view.getUint32(offset);
+            if (!PNG_STRIP.has(type)) parts.push(bytes.subarray(offset, end));
+            // anything after IEND is trailing data and gets dropped
+            if (type === 'IEND') return parts;
+            offset = end;
+        }
+        throw new Error('png ended early');
+    }
+
+    // drops exif/xmp chunks, then fixes the riff size header
+    function stripWebpParts(buffer) {
+        const bytes = new Uint8Array(buffer);
+        const view = new DataView(buffer);
+        if (ascii(bytes, 0, 4) !== 'RIFF' || ascii(bytes, 8, 4) !== 'WEBP') throw new Error('not a webp');
+
+        const riffEnd = Math.min(bytes.length, 8 + view.getUint32(4, true));
+        const chunks = [];
+        let offset = 12;
+        while (offset + 8 <= riffEnd) {
+            const fourcc = ascii(bytes, offset, 4);
+            const size = view.getUint32(offset + 4, true);
+            const end = offset + 8 + size + (size % 2);
+            if (fourcc === 'VP8X') {
+                // clear the "has exif" and "has xmp" flags, those chunks are gone
+                const chunk = bytes.slice(offset, end);
+                chunk[8] &= ~0x0C;
+                chunks.push(chunk);
+            } else if (fourcc !== 'EXIF' && fourcc !== 'XMP ') {
+                chunks.push(bytes.subarray(offset, end));
+            }
+            offset = end;
+        }
+
+        const riffSize = new Uint8Array(4);
+        new DataView(riffSize.buffer).setUint32(0, chunks.reduce((sum, c) => sum + c.length, 4), true);
+        return [bytes.subarray(0, 4), riffSize, bytes.subarray(8, 12), ...chunks];
+    }
+
+    function stripMetadataParts(kind, buffer, orientation) {
+        if (kind === 'image/jpeg') return stripJpegParts(buffer, orientation);
+        if (kind === 'image/png') return stripPngParts(buffer);
+        if (kind === 'image/webp') return stripWebpParts(buffer);
+        throw new Error('unsupported file');
+    }
+
+    /* review */
+
+    // built with textContent, since exif strings come straight from the file
+    function createInfoRow(label, value, found) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const labelEl = document.createElement('label');
+        labelEl.textContent = label;
+        const valueEl = document.createElement('span');
+        valueEl.className = 'value' + (found ? ' found' : '');
+        valueEl.textContent = value;
+        row.append(labelEl, valueEl);
+        return row;
+    }
+
+    function renderInfo(container, sections) {
+        container.replaceChildren(...sections.flatMap(({ heading, rows }) => {
+            const title = document.createElement('div');
+            title.className = 'compare-heading';
+            title.textContent = heading;
+            return [title, ...rows.map(([label, value, found]) => createInfoRow(label, value, found))];
+        }));
+        container.hidden = false;
+    }
+
+    function createReviewRow(file) {
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        row.innerHTML = `
+            <img class="file-thumb" alt="">
+            <span class="file-name"></span>
+            <span class="review-size"></span>
+            <span class="review-badge">checking…</span>
+            <div class="review-remove" role="button" aria-label="remove file">${CLOSE_ICON}</div>
+        `;
+        row.querySelector('.file-thumb').src = thumbFor(file);
+        row.querySelector('.file-name').textContent = file.name;
+        row.querySelector('.review-size').textContent = formatBytes(file.size);
+        row.querySelector('.review-remove').addEventListener('click', () => {
+            pendingFiles = pendingFiles.filter(f => f !== file);
+            releaseFile(file);
+            renderReview();
+        });
+
+        const badge = row.querySelector('.review-badge');
+        getInfoFor(file).then(info => {
+            const found = hasMetadata(info);
+            badge.textContent = found ? 'metadata found' : 'clean';
+            badge.classList.toggle('found', found);
+            if (pendingFiles.length === 1 && pendingFiles[0] === file) {
+                renderInfo(reviewPreview, [{ heading: "what's inside this file", rows: metadataRows(info) }]);
+            }
+        });
+        return row;
+    }
+
+    function renderReview() {
+        if (!pendingFiles.length) {
+            review.hidden = true;
+            dropzone.hidden = false;
+            return;
+        }
+
+        dropzone.hidden = true;
+        review.hidden = false;
+        reviewPreview.hidden = true;
+        addMoreBtn.hidden = pendingFiles.length >= MAX_FILES;
+
+        const totalSize = pendingFiles.reduce((sum, f) => sum + f.size, 0);
+        reviewSummary.textContent = `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} · ${formatBytes(totalSize)} total`;
+        reviewRows.replaceChildren(...pendingFiles.map(createReviewRow));
+    }
+
+    // tells the user what got skipped instead of silently dropping it
+    function addFiles(fileList) {
+        const skipped = { unsupported: 0, tooBig: 0, duplicate: 0, overLimit: 0 };
+        Array.from(fileList).forEach(file => {
+            const duplicate = pendingFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+            if (!fileKind(file)) skipped.unsupported++;
+            else if (file.size > MAX_SIZE) skipped.tooBig++;
+            else if (duplicate) skipped.duplicate++;
+            else if (pendingFiles.length >= MAX_FILES) skipped.overLimit++;
+            else pendingFiles.push(file);
+        });
+
+        const reasons = [
+            skipped.unsupported && `${skipped.unsupported} unsupported`,
+            skipped.tooBig && `${skipped.tooBig} over 100mb`,
+            skipped.duplicate && `${skipped.duplicate} already added`,
+            skipped.overLimit && `${skipped.overLimit} over the 8 file limit`
+        ].filter(Boolean);
+        if (reasons.length) showNotice(`skipped ${reasons.join(', ')}`);
+        renderReview();
+    }
+
+    /* processing */
+
+    async function processImage(file) {
+        const kind = fileKind(file);
+        const [buffer, info] = await Promise.all([file.arrayBuffer(), getInfoFor(file), wait(PROCESS_DELAY)]);
+        const blob = new Blob(stripMetadataParts(kind, buffer, info.orientation), { type: kind });
+        return { blob, ext: OUTPUT_EXTENSIONS[kind], info };
+    }
+
+    function cleanName(file, ext) {
+        if (randomizeFilenameOn) return `${randomFilename()}.${ext}`;
+        const dot = file.name.lastIndexOf('.');
+        return `${dot > -1 ? file.name.slice(0, dot) : file.name}-clean.${ext}`;
+    }
+
+    function downloadBlob(blob, name) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        // revoking right away can cancel the download in some browsers
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     function createRow(file) {
@@ -1132,7 +1280,7 @@
             </div>
         `;
         row.querySelector('.file-name').textContent = file.name;
-        row.querySelector('.file-thumb').src = URL.createObjectURL(file);
+        row.querySelector('.file-thumb').src = thumbFor(file);
         return {
             el: row,
             icon: row.querySelector('.status-icon'),
@@ -1140,21 +1288,31 @@
         };
     }
 
+    function summaryText(done, total) {
+        if (done === 0) return total > 1 ? "files couldn't be cleaned" : "file couldn't be cleaned";
+        if (done < total) return `${done} of ${total} downloaded`;
+        return total > 1 ? 'all files downloaded' : 'downloaded';
+    }
+
+    function renderCompare({ info, originalSize, cleanedSize }) {
+        renderInfo(compare, [
+            { heading: 'before', rows: [['file size', formatBytes(originalSize), false], ...metadataRows(info)] },
+            { heading: 'after', rows: [['file size', formatBytes(cleanedSize), false], ['metadata', 'removed', false]] }
+        ]);
+    }
+
     async function handleFiles(files) {
-        dropzone.style.display = 'none';
-        batch.classList.add('visible');
-        fileRows.innerHTML = '';
-        compare.classList.remove('visible');
-        compare.innerHTML = '';
+        review.hidden = true;
+        dropzone.hidden = true;
+        compare.hidden = true;
+        batch.hidden = false;
         batchStatusIcon.innerHTML = '<div class="spinner-ring"></div>';
 
-        const rows = files.map(file => {
-            const row = createRow(file);
-            fileRows.appendChild(row.el);
-            return row;
-        });
+        const rows = files.map(createRow);
+        fileRows.replaceChildren(...rows.map(row => row.el));
 
-        let singleFileResult = null;
+        let done = 0;
+        let singleResult = null;
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -1162,70 +1320,64 @@
             batchFooterText.textContent = `removing metadata (${i + 1}/${files.length})`;
             row.icon.classList.add('visible');
 
-            const { blob, ext, exif, originalSize } = await processImage(file);
-
-            row.icon.innerHTML = '<svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l5 5l10 -10" /></svg>';
-
-            const dot = file.name.lastIndexOf('.');
-            const base = randomizeFilenameOn
-                ? randomFilename()
-                : (dot > -1 ? file.name.slice(0, dot) + '-clean' : file.name + '-clean');
-            const newName = `${base}.${ext}`;
-            row.name.textContent = newName;
-            row.name.classList.add('updated');
-            const downloadUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = newName;
-            a.click();
-            URL.revokeObjectURL(downloadUrl);
-
-            if (files.length === 1) {
-                singleFileResult = { exif, originalSize, cleanedSize: blob.size };
+            try {
+                const { blob, ext, info } = await processImage(file);
+                const name = cleanName(file, ext);
+                downloadBlob(blob, name);
+                row.icon.innerHTML = CHECK_ICON;
+                row.name.textContent = name;
+                row.name.classList.add('updated');
+                done++;
+                if (files.length === 1) singleResult = { info, originalSize: file.size, cleanedSize: blob.size };
+            } catch {
+                // never hand out an uncleaned file, just mark the row
+                row.icon.innerHTML = FAIL_ICON;
+                row.name.textContent = `${file.name} couldn't be cleaned`;
+                row.name.classList.add('failed');
             }
         }
 
-        if (singleFileResult) renderCompare(singleFileResult);
+        if (singleResult) renderCompare(singleResult);
 
-        batchStatusIcon.innerHTML = '<svg class="progress-ring" viewBox="0 0 28 28"><circle class="progress-track" cx="14" cy="14" r="12" /><circle class="progress-fill" cx="14" cy="14" r="12" /></svg><svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l5 5l10 -10" /></svg>';
-        batchFooterText.textContent = (files.length > 1 ? 'all files downloaded' : 'downloaded') + ' · tap to dismiss';
+        batchStatusIcon.innerHTML = RING + (done ? CHECK_ICON : FAIL_ICON);
+        batchFooterText.textContent = `${summaryText(done, files.length)} · tap to dismiss`;
         batchStatusIcon.classList.add('skippable');
 
-        await waitOrSkip(20000, batchStatusIcon);
+        await waitOrSkip(DISMISS_DELAY, batchStatusIcon);
         batchStatusIcon.classList.remove('skippable');
-        batch.classList.remove('visible');
-        dropzone.style.display = 'flex';
+        files.forEach(releaseFile);
+        batch.hidden = true;
+        dropzone.hidden = false;
     }
 
-    function renderCompare(result) {
-        const { exif, originalSize, cleanedSize } = result;
-        const beforeRows = [
-            ['file size', formatBytes(originalSize), false],
-            ['camera', exif.make || exif.model ? [exif.make, exif.model].filter(Boolean).join(' ') : 'not found', !!(exif.make || exif.model)],
-            ['gps location', exif.gps ? 'found' : 'not found', !!exif.gps],
-            ['date taken', exif.dateTime || 'not found', !!exif.dateTime]
-        ];
+    /* events */
 
-        compare.innerHTML = `
-            <div class="compare-heading">before</div>
-            ${beforeRows.map(([label, value, found]) => `
-                <div class="row">
-                    <label>${label}</label>
-                    <span class="value${found ? ' found' : ''}">${value}</span>
-                </div>
-            `).join('')}
-            <div class="compare-heading">after</div>
-            <div class="row">
-                <label>file size</label>
-                <span class="value">${formatBytes(cleanedSize)}</span>
-            </div>
-            <div class="row">
-                <label>metadata</label>
-                <span class="value">removed</span>
-            </div>
-        `;
-        compare.classList.add('visible');
-    }
+    // stops the browser from opening a dropped file when it misses the dropzone
+    ['dragover', 'drop'].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', () => dropzone.classList.add('drag-over'));
+    dropzone.addEventListener('dragleave', e => {
+        if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('drag-over');
+    });
+    dropzone.addEventListener('drop', e => {
+        dropzone.classList.remove('drag-over');
+        addFiles(e.dataTransfer.files);
+    });
+
+    review.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+    addMoreBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+        addFiles(fileInput.files);
+        fileInput.value = '';
+    });
+
+    processBtn.addEventListener('click', () => {
+        const files = pendingFiles;
+        pendingFiles = [];
+        handleFiles(files);
+    });
 
     // starfield background
     (function () {
