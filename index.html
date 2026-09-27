@@ -140,7 +140,6 @@
         color: var(--accent);
     }
 
-    /* settings */
     .options {
         border-radius: var(--border-radius-lg);
         padding: var(--spacing-2) var(--spacing-3);
@@ -199,7 +198,6 @@
         background: var(--background);
     }
 
-    /* drop zone */
     .dropzone {
         border-radius: var(--border-radius-lg);
         padding: var(--spacing-4) var(--spacing-3);
@@ -240,7 +238,6 @@
         display: none;
     }
 
-    /* batch card, replaces the dropzone while files are handled */
     .batch {
         border-radius: var(--border-radius-lg);
         padding: var(--spacing-3);
@@ -299,7 +296,6 @@
         100% { opacity: 1; transform: translateY(0); }
     }
 
-    /* review, shown before processing starts */
     .review {
         border-radius: var(--border-radius-lg);
         padding: var(--spacing-3);
@@ -568,7 +564,6 @@
         to { stroke-dashoffset: 75.4; }
     }
 
-    /* faq */
     .faq {
         margin-bottom: var(--spacing-4);
     }
@@ -706,7 +701,7 @@
             <div class="faq-answer-wrap">
                 <div class="faq-answer-inner">
                     <div class="faq-answer">
-                        just drop your files in, or click to browse. everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. metadata is stripped: camera info, gps location, timestamps and everything else stored alongside the image are removed, while the actual image content stays byte-for-byte untouched. color profiles are kept, so colors look exactly the same. each cleaned file downloads individually as soon as it's done.
+                        just drop your files in, or click to browse. everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. metadata is stripped: camera info, gps location, timestamps and everything else stored alongside the image are removed, while the image itself stays exactly the same. each cleaned file downloads individually as soon as it's done.
                         <br><br>
                         right now this only supports jpeg, png, and webp images, up to 8 files at a time, 100mb each.
                     </div>
@@ -722,7 +717,7 @@
             <div class="faq-answer-wrap">
                 <div class="faq-answer-inner">
                     <div class="faq-answer">
-                        fair question, since everything runs locally there's no server cost or bandwidth to protect. the limit is about the browser itself, not about permission. every file gets held fully in memory as raw bytes while it's processed, so a large batch of huge files can genuinely slow a phone or an older laptop down. 8 files and 100mb each is just a comfortable ceiling that keeps things fast and predictable, not a hard technical wall.
+                        everything runs locally, so there's no server cost or bandwidth to protect. the limit is about the browser itself. every file has to be fully loaded into your browser while it's cleaned, so a large batch of huge files can genuinely slow older devices down. 8 files and 100mb each is just a comfortable ceiling that keeps things fast and predictable, not a hard technical wall.
                     </div>
                 </div>
             </div>
@@ -755,7 +750,7 @@
     const MAX_FILES = 8;
     const MAX_SIZE = 100 * 1024 * 1024;
     const PROCESS_DELAY = 700;
-    // keep in sync with ring-deplete in the css
+    // has to match ring-deplete in the css
     const DISMISS_DELAY = 20000;
     const NOTICE_DELAY = 5000;
 
@@ -783,7 +778,6 @@
         });
     });
 
-    /* helpers */
 
     function randomFilename(length = 12) {
         const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -800,7 +794,7 @@
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    // some systems hand over an empty file type, the extension is the fallback
+    // some systems don't give me a file type, so i check the extension instead
     function fileKind(file) {
         if (ACCEPTED_TYPES.includes(file.type)) return file.type;
         return EXTENSION_TYPES[file.name.split('.').pop().toLowerCase()] || null;
@@ -840,7 +834,6 @@
         noticeTimeout = setTimeout(() => { notice.hidden = true; }, NOTICE_DELAY);
     }
 
-    /* metadata inspection */
 
     function ascii(bytes, start, length) {
         let text = '';
@@ -850,7 +843,6 @@
 
     const TYPE_SIZES = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
 
-    // maps tag -> entry position for one tiff directory
     function readIfd(view, tiffStart, offset, little) {
         const entries = {};
         const count = view.getUint16(tiffStart + offset, little);
@@ -885,7 +877,7 @@
         return undefined;
     }
 
-    // degree/minute/second rationals into plain coordinates, or just "found" if they're empty
+    // turns the gps format into normal coordinates
     function formatGps(ifd, read) {
         const toDegrees = (dms, ref) => Array.isArray(dms) && dms.length >= 3
             ? (dms[0] + dms[1] / 60 + dms[2] / 3600) * (ref === 'S' || ref === 'W' ? -1 : 1)
@@ -895,7 +887,7 @@
         return lat !== null && lon !== null && (lat || lon) ? `${lat.toFixed(5)}, ${lon.toFixed(5)}` : 'found';
     }
 
-    // only the tags the preview shows, https://exiftool.org/TagNames/EXIF.html
+    // i only read what the preview needs, all tags are listed here https://exiftool.org/TagNames/EXIF.html
     function parseTiff(view, tiffStart) {
         const little = view.getUint16(tiffStart) === 0x4949;
         const read = (ifd, tag) => {
@@ -925,7 +917,6 @@
         try {
             Object.assign(info, parseTiff(view, start));
         } catch {
-            // unreadable exif still gets removed, it just can't be previewed
         }
     }
 
@@ -988,7 +979,6 @@
             else if (kind === 'image/png') inspectPng(bytes, view, info);
             else if (kind === 'image/webp') inspectWebp(bytes, view, info);
         } catch {
-            // odd or broken file, show whatever was found before it broke
         }
         return info;
     }
@@ -1020,9 +1010,8 @@
         ];
     }
 
-    /* stripping */
 
-    // smallest valid exif block, holds nothing but the orientation
+    // tiny exif block with only the orientation in it
     function buildMinimalOrientationExif(orientation) {
         return new Uint8Array([
             0xFF, 0xE1, 0x00, 0x22,
@@ -1034,13 +1023,13 @@
         ]);
     }
 
-    // color profile + adobe color info, needed for correct colors, nothing personal
+    // color profiles stay so colors don't change, nothing personal in there
     function isRenderingSegment(bytes, marker, data) {
         return (marker === 0xE2 && ascii(bytes, data, 11) === 'ICC_PROFILE')
             || (marker === 0xEE && ascii(bytes, data, 5) === 'Adobe');
     }
 
-    // end of the main image, anything after it can carry its own metadata
+    // phones sometimes add extra stuff after the image that can have metadata too, so i cut it off there
     function findJpegEnd(bytes, view, sos) {
         let i = sos;
         while (i < bytes.length - 3) {
@@ -1056,8 +1045,8 @@
         return bytes.length;
     }
 
-    // drops exif/xmp/comment segments, image data stays byte-for-byte the same.
-    // orientation gets re-added on its own so photos don't end up sideways
+    // i only cut out the metadata parts, the image itself stays exactly the same
+    // orientation gets added back so photos don't end up sideways
     function stripJpegParts(buffer, orientation) {
         const bytes = new Uint8Array(buffer);
         const view = new DataView(buffer);
@@ -1072,7 +1061,6 @@
             const marker = bytes[offset + 1];
             if (marker === 0xFF) { offset++; continue; }
             if (marker === 0xDA) {
-                // start of scan, image data from here, copied as-is
                 parts.push(bytes.subarray(offset, findJpegEnd(bytes, view, offset)));
                 return parts;
             }
@@ -1094,7 +1082,7 @@
     const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     const PNG_STRIP = new Set(['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME']);
 
-    // drops text/time/exif chunks, everything needed to render stays
+    // same idea for png
     function stripPngParts(buffer) {
         const bytes = new Uint8Array(buffer);
         const view = new DataView(buffer);
@@ -1106,14 +1094,13 @@
             const type = ascii(bytes, offset + 4, 4);
             const end = offset + 12 + view.getUint32(offset);
             if (!PNG_STRIP.has(type)) parts.push(bytes.subarray(offset, end));
-            // anything after IEND is trailing data and gets dropped
             if (type === 'IEND') return parts;
             offset = end;
         }
         throw new Error('png ended early');
     }
 
-    // drops exif/xmp chunks, then fixes the riff size header
+    // same for webp, then i fix the file size in the header
     function stripWebpParts(buffer) {
         const bytes = new Uint8Array(buffer);
         const view = new DataView(buffer);
@@ -1127,7 +1114,7 @@
             const size = view.getUint32(offset + 4, true);
             const end = offset + 8 + size + (size % 2);
             if (fourcc === 'VP8X') {
-                // clear the "has exif" and "has xmp" flags, those chunks are gone
+                // the header still says there's exif, so i turn that off
                 const chunk = bytes.slice(offset, end);
                 chunk[8] &= ~0x0C;
                 chunks.push(chunk);
@@ -1149,9 +1136,8 @@
         throw new Error('unsupported file');
     }
 
-    /* review */
 
-    // built with textContent, since exif strings come straight from the file
+    // textContent on purpose, exif text comes from the file and could contain code
     function createInfoRow(label, value, found) {
         const row = document.createElement('div');
         row.className = 'row';
@@ -1222,7 +1208,6 @@
         reviewRows.replaceChildren(...pendingFiles.map(createReviewRow));
     }
 
-    // tells the user what got skipped instead of silently dropping it
     function addFiles(fileList) {
         const skipped = { unsupported: 0, tooBig: 0, duplicate: 0, overLimit: 0 };
         Array.from(fileList).forEach(file => {
@@ -1244,7 +1229,6 @@
         renderReview();
     }
 
-    /* processing */
 
     async function processImage(file) {
         const kind = fileKind(file);
@@ -1265,7 +1249,7 @@
         a.href = url;
         a.download = name;
         a.click();
-        // revoking right away can cancel the download in some browsers
+        // if i clean up right away, some browsers cancel the download
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
@@ -1330,7 +1314,7 @@
                 done++;
                 if (files.length === 1) singleResult = { info, originalSize: file.size, cleanedSize: blob.size };
             } catch {
-                // never hand out an uncleaned file, just mark the row
+                // never hand out a file that isn't clean
                 row.icon.innerHTML = FAIL_ICON;
                 row.name.textContent = `${file.name} couldn't be cleaned`;
                 row.name.classList.add('failed');
@@ -1350,9 +1334,8 @@
         dropzone.hidden = false;
     }
 
-    /* events */
 
-    // stops the browser from opening a dropped file when it misses the dropzone
+    // otherwise the browser opens the image if you miss the dropzone
     ['dragover', 'drop'].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
 
     dropzone.addEventListener('click', () => fileInput.click());
