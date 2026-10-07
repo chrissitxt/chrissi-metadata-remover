@@ -1,17 +1,17 @@
-# chrissi's metadata remover
+# chrissi's Metadata Remover
 
-a lightweight, client-side tool for stripping EXIF and other metadata from your files.
+A lightweight, client-side tool for stripping EXIF and other metadata from your files.
 
-## what it does
+## What it does
 
-reads jpeg, png, and webp files as raw bytes and removes the metadata segments (exif, xmp, comments, thumbnails) while leaving the actual image data completely untouched. no canvas re-encoding, no quality loss, no recompression.
+Reads JPEG, PNG, and WebP files as raw bytes and removes the metadata segments (EXIF, XMP, comments, thumbnails) while leaving the actual image data completely untouched. No canvas re-encoding, no quality loss, no recompression.
 
-## features
+## Features
 
-- batch support, up to 8 files at a time, 100mb each. just a sane default to keep things fast and reliable
-- optional randomized filenames
-- before/after comparison when cleaning a single file, showing a few concrete examples of what was actually found (camera, gps, date taken), not the full list of everything that gets stripped
+- Batch support, up to 8 files at a time, 100 MB each. Just a sane default to keep things fast and reliable
+- Optional randomized filenames
+- Before/after comparison when cleaning a single file, showing a few concrete examples of what was actually found (camera, GPS, date taken), not the full list of everything that gets stripped
 
-## how it works
+## How it works
 
-everything runs in the browser. files are never uploaded to a server or processed anywhere else.
+Everything runs in the browser. Files are never uploaded to a server or processed anywhere else.
