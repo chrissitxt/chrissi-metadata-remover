@@ -24,7 +24,6 @@
         --weight-accent: 500;
         --border-radius: 8px;
         --border-radius-lg: 12px;
-        --font: "Inter";
     }
 
     @media (prefers-color-scheme: dark) {
@@ -40,30 +39,9 @@
     }
 
     html {
-        scroll-behavior: smooth;
         scrollbar-width: thin;
         scrollbar-color: var(--glass-border) transparent;
         scrollbar-gutter: stable;
-    }
-
-    *::-webkit-scrollbar {
-        width: 5px;
-        height: 5px;
-    }
-
-    *::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    *::-webkit-scrollbar-thumb {
-        background: var(--glass-border);
-        border-radius: 10px;
-    }
-
-    *::-webkit-scrollbar-thumb:hover {
-        background: var(--sub);
-        opacity: 0.3;
-        border-radius: 10px;
     }
 
     * {
@@ -73,7 +51,7 @@
     }
 
     body {
-        font-family: var(--font);
+        font-family: "Inter";
         background: var(--background);
         color: var(--accent);
         min-height: 100vh;
@@ -85,10 +63,6 @@
         background: var(--highlight);
     }
 
-    a {
-        color: inherit;
-    }
-
     [hidden] {
         display: none !important;
     }
@@ -97,7 +71,6 @@
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
         backdrop-filter: blur(12px);
-        transition: filter 0.2s;
     }
 
     .page {
@@ -209,8 +182,14 @@
         justify-content: center;
         gap: var(--spacing);
         text-align: center;
+        position: relative;
         cursor: pointer;
         transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .dropzone:has(:focus-visible) {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
     }
 
     .dropzone.drag-over {
@@ -236,7 +215,11 @@
     }
 
     .dropzone input[type="file"] {
-        display: none;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
     }
 
     .batch {
@@ -334,6 +317,8 @@
         width: 20px;
         height: 20px;
         flex-shrink: 0;
+        border: none;
+        background: transparent;
         color: var(--sub);
         cursor: pointer;
         display: flex;
@@ -359,7 +344,7 @@
         border: none;
         background: var(--accent);
         color: var(--background);
-        font-family: var(--font);
+        font-family: inherit;
         font-size: 14px;
         font-weight: var(--weight-accent);
         cursor: pointer;
@@ -383,7 +368,7 @@
         border: 1px dashed var(--glass-border);
         background: none;
         color: var(--sub);
-        font-family: var(--font);
+        font-family: inherit;
         font-size: 13px;
         cursor: pointer;
         display: flex;
@@ -461,16 +446,16 @@
         color: var(--sub);
     }
 
-    .status-icon.skippable {
+    .status-icon:enabled {
         cursor: pointer;
         transition: transform 0.15s ease;
     }
 
-    .status-icon.skippable:hover {
+    .status-icon:enabled:hover {
         transform: scale(1.15);
     }
 
-    .status-icon.skippable:active {
+    .status-icon:enabled:active {
         transform: scale(0.9);
     }
 
@@ -487,6 +472,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        border: none;
+        background: transparent;
     }
 
     .status-icon.small {
@@ -552,7 +539,7 @@
         stroke-linecap: round;
         stroke-dasharray: 75.4;
         stroke-dashoffset: 0;
-        animation: ring-deplete 20000ms linear forwards;
+        animation: ring-deplete var(--dismiss-delay) linear forwards;
     }
 
     @keyframes ring-deplete {
@@ -579,7 +566,7 @@
         align-items: center;
         justify-content: space-between;
         gap: var(--spacing-2);
-        font-family: var(--font);
+        font-family: inherit;
         font-size: 14px;
         color: var(--body);
     }
@@ -649,19 +636,19 @@
 
     <div class="options glass">
         <div class="row">
-            <label>randomize filename</label>
-            <div class="toggle" id="randomizeFilename"></div>
+            <label id="label-randomizeFilename">randomize filename</label>
+            <button type="button" class="toggle" id="randomizeFilename" role="switch" aria-checked="false" aria-labelledby="label-randomizeFilename"></button>
         </div>
     </div>
 
-    <div class="dropzone glass" id="dropzone">
+    <label class="dropzone glass" id="dropzone">
         <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /><path d="M12 11v6" /><path d="M9.5 13.5l2.5 -2.5l2.5 2.5" /></svg>
         <span class="dropzone-label">drop images here, or click to browse</span>
         <span class="dropzone-sub">jpeg, jpg, png, webp · up to 8 files, 100mb each</span>
-    </div>
+    </label>
 
-    <p class="notice" id="notice" hidden></p>
+    <p class="notice" id="notice" role="status" hidden></p>
 
     <div class="review glass" id="review" hidden>
         <div class="review-summary" id="reviewSummary"></div>
@@ -678,10 +665,10 @@
         <div class="file-rows" id="fileRows"></div>
         <div class="compare" id="compare" hidden></div>
         <div class="batch-footer">
-            <span class="batch-footer-text" id="batchFooterText">removing metadata</span>
-            <div class="status-icon" id="batchStatusIcon">
+            <span class="batch-footer-text" id="batchFooterText" role="status">removing metadata</span>
+            <button type="button" class="status-icon" id="batchStatusIcon" aria-label="dismiss" disabled>
                 <div class="spinner-ring"></div>
-            </div>
+            </button>
         </div>
     </div>
 
@@ -745,9 +732,10 @@
     const MAX_FILES = 8;
     const MAX_SIZE = 100 * 1024 * 1024;
     const PROCESS_DELAY = 700;
-    // has to match ring-deplete in the css
     const DISMISS_DELAY = 20000;
     const NOTICE_DELAY = 5000;
+
+    document.documentElement.style.setProperty('--dismiss-delay', DISMISS_DELAY + 'ms');
 
     const CHECK_ICON = '<svg class="status-done" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l5 5l10 -10" /></svg>';
     const FAIL_ICON = '<svg class="status-failed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>';
@@ -763,6 +751,7 @@
     randomizeFilename.addEventListener('click', () => {
         randomizeFilename.classList.toggle('on');
         randomizeFilenameOn = randomizeFilename.classList.contains('on');
+        randomizeFilename.setAttribute('aria-checked', randomizeFilenameOn);
     });
 
     document.querySelectorAll('.faq-question').forEach(btn => {
@@ -915,53 +904,76 @@
         }
     }
 
-    function inspectJpeg(bytes, view, info) {
+    // the preview and the stripping both walk a file through these, so they always agree on what's in it
+    function* jpegSegments(bytes, view) {
         let offset = 2;
         while (offset < bytes.length - 3) {
             if (bytes[offset] !== 0xFF) { offset++; continue; }
             const marker = bytes[offset + 1];
             if (marker === 0xFF) { offset++; continue; }
+            if (marker === 0xD9) return;
             if (marker === 0xDA) {
-                if (findJpegEnd(bytes, view, offset) < bytes.length - 16) info.other.push('trailing data');
+                yield { marker, offset, end: findJpegEnd(bytes, view, offset) };
                 return;
             }
-            if (marker === 0xD9) return;
-            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) { offset += 2; continue; }
-
-            const data = offset + 4;
-            if (marker === 0xE1 && ascii(bytes, data, 6) === 'Exif\0\0') addExif(info, view, data + 6);
-            else if (marker === 0xE1 && ascii(bytes, data, 23) === 'http://ns.adobe.com/xap') info.other.push('xmp');
-            else if (marker === 0xE2 && ascii(bytes, data, 3) === 'MPF') info.other.push('extra images');
-            else if (marker === 0xED) info.other.push('iptc');
-            else if (marker === 0xFE) info.other.push('comment');
-            offset += 2 + view.getUint16(offset + 2);
+            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) {
+                yield { marker, offset, end: offset + 2 };
+                offset += 2;
+                continue;
+            }
+            const end = offset + 2 + view.getUint16(offset + 2);
+            yield { marker, offset, data: offset + 4, end };
+            offset = end;
         }
     }
 
-    function inspectPng(bytes, view, info) {
+    function* pngChunks(bytes, view) {
         let offset = 8;
         while (offset + 12 <= bytes.length) {
             const type = ascii(bytes, offset + 4, 4);
-            const data = offset + 8;
-            if (type === 'eXIf') addExif(info, view, data);
-            else if (type === 'tIME') info.other.push('timestamp');
-            else if (type === 'iTXt' && ascii(bytes, data, 17) === 'XML:com.adobe.xmp') info.other.push('xmp');
-            else if (type === 'tEXt' || type === 'zTXt' || type === 'iTXt') info.other.push('text');
+            const end = offset + 12 + view.getUint32(offset);
+            yield { type, offset, data: offset + 8, end };
             if (type === 'IEND') return;
-            offset += 12 + view.getUint32(offset);
+            offset = end;
         }
     }
 
-    function inspectWebp(bytes, view, info) {
+    function* webpChunks(bytes, view) {
         const riffEnd = Math.min(bytes.length, 8 + view.getUint32(4, true));
         let offset = 12;
         while (offset + 8 <= riffEnd) {
             const fourcc = ascii(bytes, offset, 4);
             const size = view.getUint32(offset + 4, true);
-            const data = offset + 8;
+            const end = offset + 8 + size + (size % 2);
+            yield { fourcc, offset, data: offset + 8, end };
+            offset = end;
+        }
+    }
+
+    function inspectJpeg(bytes, view, info) {
+        for (const { marker, data, end } of jpegSegments(bytes, view)) {
+            if (marker === 0xDA && end < bytes.length - 16) info.other.push('trailing data');
+            else if (marker === 0xE1 && ascii(bytes, data, 6) === 'Exif\0\0') addExif(info, view, data + 6);
+            else if (marker === 0xE1 && ascii(bytes, data, 23) === 'http://ns.adobe.com/xap') info.other.push('xmp');
+            else if (marker === 0xE2 && ascii(bytes, data, 3) === 'MPF') info.other.push('extra images');
+            else if (marker === 0xED) info.other.push('iptc');
+            else if (marker === 0xFE) info.other.push('comment');
+        }
+    }
+
+    function inspectPng(bytes, view, info) {
+        for (const { type, data } of pngChunks(bytes, view)) {
+            if (type === 'eXIf') addExif(info, view, data);
+            else if (type === 'tIME') info.other.push('timestamp');
+            else if (type === 'iTXt' && ascii(bytes, data, 17) === 'XML:com.adobe.xmp') info.other.push('xmp');
+            else if (type === 'tEXt' || type === 'zTXt' || type === 'iTXt') info.other.push('text');
+        }
+    }
+
+    function inspectWebp(bytes, view, info) {
+        for (const { fourcc, data } of webpChunks(bytes, view)) {
             if (fourcc === 'EXIF') addExif(info, view, ascii(bytes, data, 6) === 'Exif\0\0' ? data + 6 : data);
             else if (fourcc === 'XMP ') info.other.push('xmp');
-            offset = data + size + (size % 2);
         }
     }
 
@@ -1050,28 +1062,14 @@
         const parts = [bytes.subarray(0, 2)];
         if (orientation && orientation !== 1) parts.push(buildMinimalOrientationExif(orientation));
 
-        let offset = 2;
-        while (offset < bytes.length - 3) {
-            if (bytes[offset] !== 0xFF) { offset++; continue; }
-            const marker = bytes[offset + 1];
-            if (marker === 0xFF) { offset++; continue; }
-            if (marker === 0xDA) {
-                parts.push(bytes.subarray(offset, findJpegEnd(bytes, view, offset)));
-                return parts;
-            }
-            if (marker === 0xD9) break;
-            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) {
-                parts.push(bytes.subarray(offset, offset + 2));
-                offset += 2;
-                continue;
-            }
-
-            const end = offset + 2 + view.getUint16(offset + 2);
+        let foundImage = false;
+        for (const { marker, offset, data, end } of jpegSegments(bytes, view)) {
+            if (marker === 0xDA) foundImage = true;
             const isMetadata = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
-            if (!isMetadata || isRenderingSegment(bytes, marker, offset + 4)) parts.push(bytes.subarray(offset, end));
-            offset = end;
+            if (!isMetadata || isRenderingSegment(bytes, marker, data)) parts.push(bytes.subarray(offset, end));
         }
-        throw new Error('no image data found');
+        if (!foundImage) throw new Error('no image data found');
+        return parts;
     }
 
     const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
@@ -1084,15 +1082,13 @@
         if (!PNG_SIGNATURE.every((b, i) => bytes[i] === b)) throw new Error('not a png');
 
         const parts = [bytes.subarray(0, 8)];
-        let offset = 8;
-        while (offset + 12 <= bytes.length) {
-            const type = ascii(bytes, offset + 4, 4);
-            const end = offset + 12 + view.getUint32(offset);
+        let foundEnd = false;
+        for (const { type, offset, end } of pngChunks(bytes, view)) {
             if (!PNG_STRIP.has(type)) parts.push(bytes.subarray(offset, end));
-            if (type === 'IEND') return parts;
-            offset = end;
+            if (type === 'IEND') foundEnd = true;
         }
-        throw new Error('png ended early');
+        if (!foundEnd) throw new Error('png ended early');
+        return parts;
     }
 
     // same for webp, then i fix the file size in the header
@@ -1101,13 +1097,8 @@
         const view = new DataView(buffer);
         if (ascii(bytes, 0, 4) !== 'RIFF' || ascii(bytes, 8, 4) !== 'WEBP') throw new Error('not a webp');
 
-        const riffEnd = Math.min(bytes.length, 8 + view.getUint32(4, true));
         const chunks = [];
-        let offset = 12;
-        while (offset + 8 <= riffEnd) {
-            const fourcc = ascii(bytes, offset, 4);
-            const size = view.getUint32(offset + 4, true);
-            const end = offset + 8 + size + (size % 2);
+        for (const { fourcc, offset, end } of webpChunks(bytes, view)) {
             if (fourcc === 'VP8X') {
                 // the header still says there's exif, so i turn that off
                 const chunk = bytes.slice(offset, end);
@@ -1116,7 +1107,6 @@
             } else if (fourcc !== 'EXIF' && fourcc !== 'XMP ') {
                 chunks.push(bytes.subarray(offset, end));
             }
-            offset = end;
         }
 
         const riffSize = new Uint8Array(4);
@@ -1163,7 +1153,7 @@
             <span class="file-name"></span>
             <span class="review-size"></span>
             <span class="review-badge">checking…</span>
-            <div class="review-remove" role="button" aria-label="remove file">${CLOSE_ICON}</div>
+            <button type="button" class="review-remove" aria-label="remove file">${CLOSE_ICON}</button>
         `;
         row.querySelector('.file-thumb').src = thumbFor(file);
         row.querySelector('.file-name').textContent = file.name;
@@ -1320,10 +1310,10 @@
 
         batchStatusIcon.innerHTML = RING + (done ? CHECK_ICON : FAIL_ICON);
         batchFooterText.textContent = `${summaryText(done, files.length)} · tap to dismiss`;
-        batchStatusIcon.classList.add('skippable');
+        batchStatusIcon.disabled = false;
 
         await waitOrSkip(DISMISS_DELAY, batchStatusIcon);
-        batchStatusIcon.classList.remove('skippable');
+        batchStatusIcon.disabled = true;
         files.forEach(releaseFile);
         batch.hidden = true;
         dropzone.hidden = false;
@@ -1333,7 +1323,6 @@
     // otherwise the browser opens the image if you miss the dropzone
     ['dragover', 'drop'].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
 
-    dropzone.addEventListener('click', () => fileInput.click());
     dropzone.addEventListener('dragover', () => dropzone.classList.add('drag-over'));
     dropzone.addEventListener('dragleave', e => {
         if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('drag-over');
