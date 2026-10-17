@@ -2,1379 +2,1163 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>chrissi's metadata remover</title>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#faf8ff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141219" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧼</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-    /* design tokens */
+@font-face {
+    font-family: Lora;
+    font-weight: 500;
+    font-display: block;
+    src: url(assets/lora.woff) format("woff");
+}
+
+:root {
+    --background: #faf8ff;
+    --accent: #211b2e;
+    --body: #4c4366;
+    --sub: #6a6285;
+    --highlight: #ece6fb;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-color-scheme: dark) {
     :root {
-        --background: #ffffff;
-        --accent: #000000;
-        --body: #000000;
-        --sub: #4f4f4f;
-        --highlight: #e0e0e0;
-        --glass-bg: rgba(0, 0, 0, 0.03);
-        --glass-border: rgba(0, 0, 0, 0.08);
-        --spacing: 8px;
-        --spacing-2: 16px;
-        --spacing-3: 24px;
-        --spacing-4: 32px;
-        --weight-body: 400;
-        --weight-accent: 500;
-        --border-radius: 8px;
-        --border-radius-lg: 12px;
+        --background: #141219;
+        --accent: #efeafb;
+        --body: #b5aec8;
+        --sub: #9890b3;
+        --highlight: #2b2638;
     }
+}
 
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --background: #000000;
-            --accent: #e9e9e9;
-            --body: #a2a2a2;
-            --sub: #6e6e6e;
-            --highlight: #222222;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-        }
-    }
+* {
+    margin: 0;
+}
 
-    html {
-        scrollbar-width: thin;
-        scrollbar-color: var(--glass-border) transparent;
-        scrollbar-gutter: stable;
-    }
+[hidden] {
+    display: none !important;
+}
 
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+body {
+    font-family: Lora;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.35;
+    background: var(--background);
+    color: var(--body);
+    cursor: default;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+}
 
-    body {
-        font-family: "Inter";
-        background: var(--background);
+::selection {
+    background: var(--highlight);
+}
+
+main {
+    flex: 1;
+    max-width: 500px;
+    margin: max(16px, 8vh) 16px 16px;
+}
+
+h1 {
+    font-size: 1.25em;
+    font-weight: 500;
+    color: var(--accent);
+}
+
+a {
+    color: inherit;
+    text-underline-offset: 3px;
+}
+
+button {
+    all: unset;
+    cursor: pointer;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.i {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.sub {
+    font-size: 0.9em;
+    color: var(--sub);
+}
+
+@keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+}
+
+@keyframes pop {
+    from { opacity: 0; transform: scale(0.5); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes deplete {
+    to { stroke-dashoffset: 75.4; }
+}
+
+main > *,
+.card,
+.compare {
+    animation: rise 0.6s var(--ease) backwards;
+    animation-delay: calc(var(--n, 0) * 70ms);
+}
+
+.options {
+    margin-top: 24px;
+}
+
+label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+input {
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.dropzone {
+    margin-top: 16px;
+    padding: 32px 16px;
+    flex-direction: column;
+    gap: 8px;
+    border-radius: 16px;
+    background: var(--highlight);
+    text-align: center;
+    box-shadow: inset 0 0 0 1px transparent;
+    transition: transform 0.25s var(--ease), box-shadow 0.2s;
+}
+
+.dropzone .i {
+    width: 32px;
+    height: 32px;
+    color: var(--accent);
+    transition: transform 0.3s var(--spring);
+}
+
+.dropzone:hover .i,
+.dropzone.drag-over .i {
+    transform: translateY(-4px);
+}
+
+.dropzone.drag-over {
+    transform: scale(1.02);
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.dropzone input {
+    display: none;
+}
+
+#notice {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.card {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--highlight);
+}
+
+.summary {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--sub);
+}
+
+.file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+}
+
+.file-row + .file-row {
+    border-top: 1px solid var(--background);
+}
+
+.file-thumb {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.file-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-name.updated {
+    animation: rise 0.3s var(--ease);
+}
+
+.file-name.failed {
+    color: var(--sub);
+}
+
+.badge {
+    flex: none;
+    font-size: 0.8em;
+    color: var(--sub);
+}
+
+.badge.found {
+    color: var(--accent);
+}
+
+.remove {
+    display: flex;
+    flex: none;
+    color: var(--sub);
+    transition: color 0.2s, transform 0.2s var(--ease);
+}
+
+.remove .i {
+    width: 18px;
+    height: 18px;
+}
+
+@media (hover: hover) {
+    .remove:hover {
         color: var(--accent);
-        min-height: 100vh;
-        font-weight: var(--weight-body);
-        cursor: default;
+        transform: rotate(90deg);
     }
+}
 
-    ::selection {
-        background: var(--highlight);
+.pill {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    transition: transform 0.2s var(--ease), opacity 0.2s;
+}
+
+.pill:active {
+    transform: scale(0.94);
+}
+
+@media (hover: hover) {
+    .pill:hover {
+        transform: translateY(-2px);
+        opacity: 0.88;
     }
+}
 
-    [hidden] {
-        display: none !important;
-    }
+.pill.main {
+    width: 100%;
+    margin-top: 16px;
+    background: var(--accent);
+    color: var(--background);
+}
 
-    .glass {
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
-        backdrop-filter: blur(12px);
-    }
+.pill.ghost {
+    width: 100%;
+    margin-top: 12px;
+    color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--sub);
+}
 
-    .page {
-        position: relative;
-        z-index: 1;
-        max-width: 480px;
-        margin: 0 auto;
-        padding: clamp(28px, 6vw, 56px) clamp(20px, 4vw, 40px);
-    }
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--sub);
+}
 
-    /* site-wide subtle starfield background */
-    .starfield {
-        position: fixed;
-        inset: 0;
-        overflow: hidden;
-        pointer-events: none;
-        z-index: 0;
-    }
+.status {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-    .star {
-        position: absolute;
-        border-radius: 50%;
-        background: var(--sub);
-        animation: star-drift linear infinite alternate, star-twinkle ease-in-out infinite;
-    }
+.status.small {
+    width: 22px;
+    height: 22px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
 
-    @keyframes star-drift {
-        from { transform: translate(0, 0); }
-        to { transform: translate(var(--drift-x, 20vw), var(--drift-y, 20vh)); }
-    }
+.status.small.visible {
+    opacity: 1;
+}
 
-    @keyframes star-twinkle {
-        0%, 100% { opacity: var(--star-min, 0.1); }
-        50% { opacity: var(--star-max, 0.4); }
-    }
+button.status:enabled {
+    transition: transform 0.2s var(--spring);
+}
 
-    .page-title {
-        font-size: 26px;
-        font-weight: var(--weight-accent);
-        margin-bottom: var(--spacing-4);
-        color: var(--accent);
-    }
-
-    .options {
-        border-radius: var(--border-radius-lg);
-        padding: var(--spacing-2) var(--spacing-3);
-        margin-bottom: var(--spacing-2);
-    }
-
-    .row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--spacing-2);
-        padding: 14px 0;
-        border-bottom: 1px solid var(--glass-border);
-    }
-
-    .row:last-child {
-        border-bottom: none;
-    }
-
-    .row label {
-        font-size: 14px;
-        color: var(--body);
-    }
-
-    .toggle {
-        width: 36px;
-        height: 20px;
-        border-radius: 10px;
-        border: 1px solid var(--glass-border);
-        position: relative;
-        cursor: pointer;
-        background: var(--glass-bg);
-        transition: background 0.2s ease, border-color 0.2s ease;
-        flex-shrink: 0;
-    }
-
-    .toggle.on {
-        background: var(--accent);
-        border-color: var(--accent);
-    }
-
-    .toggle::after {
-        content: '';
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: var(--sub);
-        transition: transform 0.2s ease, background 0.2s ease;
-    }
-
-    .toggle.on::after {
-        transform: translateX(16px);
-        background: var(--background);
-    }
-
-    .dropzone {
-        border-radius: var(--border-radius-lg);
-        padding: var(--spacing-4) var(--spacing-3);
-        margin-bottom: var(--spacing-4);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: var(--spacing);
-        text-align: center;
-        position: relative;
-        cursor: pointer;
-        transition: border-color 0.2s ease, background 0.2s ease;
-    }
-
-    .dropzone:has(:focus-visible) {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-    }
-
-    .dropzone.drag-over {
-        border-color: var(--accent);
-        background: var(--highlight);
-    }
-
-    .dropzone svg {
-        width: 28px;
-        height: 28px;
-        color: var(--sub);
-        margin-bottom: 4px;
-    }
-
-    .dropzone-label {
-        font-size: 14px;
-        color: var(--body);
-    }
-
-    .dropzone-sub {
-        font-size: 13px;
-        color: var(--sub);
-    }
-
-    .dropzone input[type="file"] {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    .batch {
-        border-radius: var(--border-radius-lg);
-        padding: var(--spacing-3);
-        margin-bottom: var(--spacing-4);
-        display: flex;
-        flex-direction: column;
-        animation: card-in 0.3s ease;
-    }
-
-    @keyframes card-in {
-        from { opacity: 0; transform: translateY(-3px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .file-rows {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .file-row {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-2);
-        padding: var(--spacing) 0;
-        border-bottom: 1px solid var(--glass-border);
-    }
-
-    .file-row:last-child {
-        border-bottom: none;
-    }
-
-    .file-thumb {
-        width: 32px;
-        height: 32px;
-        border-radius: var(--border-radius);
-        object-fit: cover;
-        flex-shrink: 0;
-    }
-
-    .file-name {
-        flex: 1;
-        min-width: 0;
-        font-size: 13px;
-        color: var(--body);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .file-name.updated {
-        animation: name-update 0.3s ease;
-    }
-
-    @keyframes name-update {
-        0% { opacity: 0; transform: translateY(-2px); }
-        100% { opacity: 1; transform: translateY(0); }
-    }
-
-    .review {
-        border-radius: var(--border-radius-lg);
-        padding: var(--spacing-3);
-        margin-bottom: var(--spacing-4);
-        display: flex;
-        flex-direction: column;
-        animation: card-in 0.3s ease;
-    }
-
-    .review-summary {
-        font-size: 13px;
-        color: var(--sub);
-        padding-bottom: var(--spacing-2);
-        margin-bottom: var(--spacing);
-        border-bottom: 1px solid var(--glass-border);
-    }
-
-    .review-size {
-        font-size: 12px;
-        color: var(--sub);
-        flex-shrink: 0;
-    }
-
-    .review-badge {
-        font-size: 12px;
-        color: var(--sub);
-        flex-shrink: 0;
-    }
-
-    .review-badge.found {
-        color: var(--accent);
-    }
-
-    .review-remove {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-        border: none;
-        background: transparent;
-        color: var(--sub);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: color 0.15s ease;
-    }
-
-    .review-remove:hover {
-        color: var(--accent);
-    }
-
-    .review-remove svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    button#processBtn {
-        width: 100%;
-        margin-top: var(--spacing-2);
-        padding: 14px;
-        border-radius: var(--border-radius);
-        border: none;
-        background: var(--accent);
-        color: var(--background);
-        font-family: inherit;
-        font-size: 14px;
-        font-weight: var(--weight-accent);
-        cursor: pointer;
-        transition: opacity 0.2s ease, transform 0.1s ease;
-    }
-
-    button#processBtn:hover {
-        opacity: 0.85;
-    }
-
-    button#processBtn:active {
-        opacity: 0.7;
-        transform: scale(0.98);
-    }
-
-    button#addMoreBtn {
-        width: 100%;
-        margin-top: var(--spacing-2);
-        padding: 10px;
-        border-radius: var(--border-radius);
-        border: 1px dashed var(--glass-border);
-        background: none;
-        color: var(--sub);
-        font-family: inherit;
-        font-size: 13px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition: color 0.15s ease, border-color 0.15s ease;
-    }
-
-    button#addMoreBtn svg {
-        width: 14px;
-        height: 14px;
-    }
-
-    button#addMoreBtn:hover {
-        color: var(--accent);
-        border-color: var(--accent);
-    }
-
-    .batch-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--spacing-2);
-        padding-top: var(--spacing-2);
-        margin-top: var(--spacing);
-        border-top: 1px solid var(--glass-border);
-    }
-
-    .compare {
-        margin-top: var(--spacing);
-        padding-top: var(--spacing-2);
-        border-top: 1px solid var(--glass-border);
-        animation: card-in 0.3s ease;
-    }
-
-    .compare-heading {
-        font-size: 12px;
-        font-weight: var(--weight-accent);
-        color: var(--sub);
-        margin: var(--spacing-2) 0 var(--spacing);
-    }
-
-    .compare-heading:first-child {
-        margin-top: 0;
-    }
-
-    .compare .row {
-        padding: 6px 0;
-    }
-
-    .compare .row label {
-        font-size: 13px;
-    }
-
-    .value {
-        font-size: 13px;
-        color: var(--sub);
-        text-align: right;
-        overflow-wrap: anywhere;
-    }
-
-    .value.found {
-        color: var(--accent);
-    }
-
-    .file-name.failed {
-        color: var(--sub);
-    }
-
-    .notice {
-        margin: calc(var(--spacing-3) * -1) 0 var(--spacing-3);
-        text-align: center;
-        font-size: 13px;
-        color: var(--sub);
-    }
-
-    .status-icon:enabled {
-        cursor: pointer;
-        transition: transform 0.15s ease;
-    }
-
-    .status-icon:enabled:hover {
+@media (hover: hover) {
+    button.status:enabled:hover {
         transform: scale(1.15);
     }
+}
 
-    .status-icon:enabled:active {
-        transform: scale(0.9);
-    }
+button.status:enabled:active {
+    transform: scale(0.9);
+}
 
-    .batch-footer-text {
-        font-size: 13px;
-        color: var(--sub);
-    }
+.spinner {
+    width: 22px;
+    height: 22px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid var(--background);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+}
 
-    .status-icon {
-        width: 28px;
-        height: 28px;
-        flex-shrink: 0;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: none;
-        background: transparent;
-    }
+.done,
+.failed-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--accent);
+    animation: pop 0.35s var(--spring);
+}
 
-    .status-icon.small {
-        width: 22px;
-        height: 22px;
-        opacity: 0;
-        transition: opacity 0.15s ease;
-    }
+.failed-icon {
+    color: var(--sub);
+}
 
-    .status-icon.small.visible {
-        opacity: 1;
-    }
+.ring {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+}
 
-    .spinner-ring {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        border: 2px solid var(--glass-border);
-        border-top-color: var(--accent);
-        animation: spin 0.8s linear infinite;
-    }
+.ring circle {
+    fill: none;
+    stroke-width: 2;
+}
 
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
+.ring .track {
+    stroke: var(--background);
+}
 
-    .status-done,
-    .status-failed {
-        width: 16px;
-        height: 16px;
-        color: var(--accent);
-        animation: check-pop 0.3s ease;
-    }
+.ring .fill {
+    stroke: var(--accent);
+    stroke-linecap: round;
+    stroke-dasharray: 75.4;
+    animation: deplete var(--dismiss-delay) linear forwards;
+}
 
-    .status-failed {
-        color: var(--sub);
-    }
+.compare {
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--sub);
+}
 
-    @keyframes check-pop {
-        0% { transform: scale(0.5); opacity: 0; }
-        60% { transform: scale(1.15); opacity: 1; }
-        100% { transform: scale(1); }
-    }
+.compare h2 {
+    margin: 16px 0 8px;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: var(--sub);
+}
 
-    .progress-ring {
-        position: absolute;
-        inset: 0;
-        width: 28px;
-        height: 28px;
-        transform: rotate(-90deg);
-    }
+.compare h2:first-child {
+    margin-top: 0;
+}
 
-    .progress-ring .progress-track {
-        fill: none;
-        stroke: var(--glass-border);
-        stroke-width: 2;
-    }
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 4px 0;
+    font-size: 0.9em;
+}
 
-    .progress-ring .progress-fill {
-        fill: none;
-        stroke: var(--accent);
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-dasharray: 75.4;
-        stroke-dashoffset: 0;
-        animation: ring-deplete var(--dismiss-delay) linear forwards;
-    }
+.value {
+    text-align: right;
+    overflow-wrap: anywhere;
+    color: var(--sub);
+}
 
-    @keyframes ring-deplete {
-        to { stroke-dashoffset: 75.4; }
-    }
+.value.found {
+    color: var(--accent);
+}
 
-    .faq {
-        margin-bottom: var(--spacing-4);
-    }
+.faq {
+    margin-top: 32px;
+}
 
-    .faq-item {
-        border-radius: var(--border-radius-lg);
-        margin-bottom: var(--spacing);
-        overflow: hidden;
-    }
+.faq-item {
+    margin-top: 8px;
+    border-radius: 16px;
+    background: var(--highlight);
+    overflow: hidden;
+}
 
-    .faq-question {
-        width: 100%;
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 14px var(--spacing-3);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--spacing-2);
-        font-family: inherit;
-        font-size: 14px;
-        color: var(--body);
-    }
+.faq-question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 14px 16px;
+    color: var(--accent);
+}
 
-    .faq-item .chevron {
-        width: 16px;
-        height: 16px;
-        color: var(--sub);
-        flex-shrink: 0;
-        transform: rotate(180deg);
-        transition: transform 0.25s ease;
-    }
+.faq-question:focus-visible {
+    outline-offset: -2px;
+}
 
-    .faq-item.open .chevron {
-        transform: rotate(0deg);
-    }
+.faq-question .i {
+    color: var(--sub);
+    transition: transform 0.3s var(--spring);
+}
 
-    .faq-answer-wrap {
-        display: grid;
-        grid-template-rows: 0fr;
-        transition: grid-template-rows 0.25s ease;
-    }
+.open .faq-question .i {
+    transform: rotate(180deg);
+}
 
-    .faq-item.open .faq-answer-wrap {
-        grid-template-rows: 1fr;
-    }
+.faq-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s var(--ease);
+}
 
-    .faq-answer-inner {
-        overflow: hidden;
-    }
+.open .faq-wrap {
+    grid-template-rows: 1fr;
+}
 
-    .faq-answer {
-        padding: 0 var(--spacing-3) var(--spacing-3);
-        font-size: 14px;
-        line-height: 1.7;
-        color: var(--sub);
-    }
+.faq-inner {
+    overflow: hidden;
+}
 
-    /* footer credit */
-    .made-by {
-        display: block;
-        text-align: center;
-        margin-top: var(--spacing-4);
-        font-size: 13px;
-        color: var(--sub);
-        text-decoration: none;
-        transition: color 0.2s ease;
-    }
+.faq-answer {
+    padding: 0 16px 16px;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
 
-    .made-by:hover {
-        color: var(--accent);
-    }
+.faq-answer p + p {
+    margin-top: 12px;
+}
 
-    .section-divider {
-        border: none;
-        border-top: 1px solid var(--glass-border);
-        margin: var(--spacing-4) 0;
-    }
+.credit {
+    margin-top: 32px;
+}
 </style>
 </head>
 <body>
+<main>
+    <h1>chrissi's metadata remover</h1>
 
-<div class="starfield" id="starfield"></div>
-
-<div class="page">
-    <h1 class="page-title">chrissi's metadata remover</h1>
-
-    <div class="options glass">
-        <div class="row">
-            <label id="label-randomizeFilename">randomize filename</label>
-            <button type="button" class="toggle" id="randomizeFilename" role="switch" aria-checked="false" aria-labelledby="label-randomizeFilename"></button>
-        </div>
+    <div class="options" style="--n:1">
+        <label><input type="checkbox" id="randomize"> Randomize filename</label>
     </div>
 
-    <label class="dropzone glass" id="dropzone">
+    <label class="dropzone" id="dropzone" style="--n:2">
         <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /><path d="M12 11v6" /><path d="M9.5 13.5l2.5 -2.5l2.5 2.5" /></svg>
-        <span class="dropzone-label">drop images here, or click to browse</span>
-        <span class="dropzone-sub">jpeg, jpg, png, webp · up to 8 files, 100mb each</span>
+        <svg class="i" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /><path d="M12 11v6" /><path d="M9.5 13.5l2.5 -2.5l2.5 2.5" /></svg>
+        <span>Drop images here, or click to browse</span>
+        <span class="sub">JPEG, PNG, WebP · up to 8 files, 100 MB each</span>
     </label>
 
-    <p class="notice" id="notice" role="status" hidden></p>
+    <p class="sub" id="notice" hidden></p>
 
-    <div class="review glass" id="review" hidden>
-        <div class="review-summary" id="reviewSummary"></div>
-        <div class="file-rows" id="reviewRows"></div>
+    <div class="card" id="review" hidden>
+        <div class="summary sub" id="reviewSummary"></div>
+        <div id="reviewRows"></div>
         <div class="compare" id="reviewPreview" hidden></div>
-        <button id="addMoreBtn" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
-            add more files
+        <button class="pill ghost" id="addMore" type="button">
+            <svg class="i" viewBox="0 0 24 24"><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+            Add more files
         </button>
-        <button id="processBtn" type="button">remove metadata</button>
+        <button class="pill main" id="process" type="button">
+            <svg class="i" viewBox="0 0 24 24"><path d="M19 20h-10.5l-4.21 -4.3a1 1 0 0 1 0 -1.41l10 -10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9.2 9.3" /><path d="M18 13.3l-6.3 -6.3" /></svg>
+            Remove metadata
+        </button>
     </div>
 
-    <div class="batch glass" id="batch" hidden>
-        <div class="file-rows" id="fileRows"></div>
+    <div class="card" id="batch" hidden>
+        <div id="fileRows"></div>
         <div class="compare" id="compare" hidden></div>
-        <div class="batch-footer">
-            <span class="batch-footer-text" id="batchFooterText" role="status">removing metadata</span>
-            <button type="button" class="status-icon" id="batchStatusIcon" aria-label="dismiss" disabled>
-                <div class="spinner-ring"></div>
+        <div class="footer">
+            <span class="sub" id="batchText">Removing metadata</span>
+            <button class="status" id="batchStatus" type="button" disabled>
+                <div class="spinner"></div>
             </button>
         </div>
     </div>
 
-    <hr class="section-divider">
-
-    <div class="faq">
-        <div class="faq-item glass">
-            <button class="faq-question" type="button" aria-expanded="false">
-                how does it work?
-                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M6 15l6 -6l6 6" /></svg>
+    <div class="faq" style="--n:3">
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                How does it work?
+                <svg class="i" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6" /></svg>
             </button>
-            <div class="faq-answer-wrap">
-                <div class="faq-answer-inner">
-                    <div class="faq-answer">
-                        just drop your files in, or click to browse. everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. metadata is stripped: camera info, gps location, timestamps and everything else stored alongside the image are removed, while the image itself stays exactly the same. each cleaned file downloads individually as soon as it's done.
-                        <br><br>
-                        right now this only supports jpeg, png, and webp images, up to 8 files at a time, 100mb each.
-                    </div>
-                </div>
-            </div>
+            <div class="faq-wrap"><div class="faq-inner"><div class="faq-answer">
+                <p>Just drop your files in, or click to browse. Everything is read directly in your browser, nothing gets uploaded to a server or processed anywhere else. Metadata is stripped: camera info, GPS location, timestamps and everything else stored alongside the image are removed, while the image itself stays exactly the same. Each cleaned file downloads individually as soon as it's done.</p>
+                <p>Right now this only supports JPEG, PNG and WebP images, up to 8 files at a time, 100 MB each.</p>
+            </div></div></div>
         </div>
-
-        <div class="faq-item glass">
-            <button class="faq-question" type="button" aria-expanded="false">
-                why is there a limit at all?
-                <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M6 15l6 -6l6 6" /></svg>
+        <div class="faq-item">
+            <button class="faq-question" type="button">
+                Why is there a limit at all?
+                <svg class="i" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6" /></svg>
             </button>
-            <div class="faq-answer-wrap">
-                <div class="faq-answer-inner">
-                    <div class="faq-answer">
-                        everything runs locally, so there's no server cost or bandwidth to protect. the limit is about the browser itself. every file has to be fully loaded into your browser while it's cleaned, so a large batch of huge files can genuinely slow older devices down. 8 files and 100mb each is just a comfortable ceiling that keeps things fast and predictable, not a hard technical wall.
-                    </div>
-                </div>
-            </div>
+            <div class="faq-wrap"><div class="faq-inner"><div class="faq-answer">
+                <p>Everything runs locally, so there's no server cost or bandwidth to protect. The limit is about the browser itself. Every file has to be fully loaded into your browser while it's cleaned, so a large batch of huge files can genuinely slow older devices down. 8 files and 100 MB each is just a comfortable ceiling that keeps things fast and predictable, not a hard technical wall.</p>
+            </div></div></div>
         </div>
     </div>
 
-    <a class="made-by" href="https://chrissitxt.me" target="_blank" rel="noopener noreferrer">made by chrissi</a>
-</div>
+    <p class="sub credit" style="--n:4"><a href="https://chrissitxt.me">made by chrissi</a></p>
+</main>
 
 <script>
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('fileInput');
-    const notice = document.getElementById('notice');
-    const review = document.getElementById('review');
-    const reviewSummary = document.getElementById('reviewSummary');
-    const reviewRows = document.getElementById('reviewRows');
-    const reviewPreview = document.getElementById('reviewPreview');
-    const addMoreBtn = document.getElementById('addMoreBtn');
-    const processBtn = document.getElementById('processBtn');
-    const batch = document.getElementById('batch');
-    const fileRows = document.getElementById('fileRows');
-    const compare = document.getElementById('compare');
-    const batchFooterText = document.getElementById('batchFooterText');
-    const batchStatusIcon = document.getElementById('batchStatusIcon');
-    const randomizeFilename = document.getElementById('randomizeFilename');
+const $ = id => document.getElementById(id);
 
-    const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-    const EXTENSION_TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
-    const OUTPUT_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-    const MAX_FILES = 8;
-    const MAX_SIZE = 100 * 1024 * 1024;
-    const PROCESS_DELAY = 700;
-    const DISMISS_DELAY = 20000;
-    const NOTICE_DELAY = 5000;
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const EXTENSION_TYPES = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+const OUTPUT_EXTENSIONS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const MAX_FILES = 8;
+const MAX_SIZE = 100 * 1024 * 1024;
+const PROCESS_DELAY = 700;
+const DISMISS_DELAY = 20000;
+const NOTICE_DELAY = 5000;
 
-    document.documentElement.style.setProperty('--dismiss-delay', DISMISS_DELAY + 'ms');
+document.documentElement.style.setProperty("--dismiss-delay", DISMISS_DELAY + "ms");
 
-    const CHECK_ICON = '<svg class="status-done" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l5 5l10 -10" /></svg>';
-    const FAIL_ICON = '<svg class="status-failed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>';
-    const CLOSE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>';
-    const RING = '<svg class="progress-ring" viewBox="0 0 28 28"><circle class="progress-track" cx="14" cy="14" r="12" /><circle class="progress-fill" cx="14" cy="14" r="12" /></svg>';
+const SVG = (paths, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24">${paths}</svg>`;
+const X_PATHS = '<path d="M18 6l-12 12" /><path d="M6 6l12 12" />';
+const X_ICON = SVG(X_PATHS);
+const CHECK_ICON = SVG('<path d="M5 12l5 5l10 -10" />', "done");
+const FAIL_ICON = SVG(X_PATHS, "failed-icon");
+const RING = '<svg class="ring" viewBox="0 0 28 28"><circle class="track" cx="14" cy="14" r="12" /><circle class="fill" cx="14" cy="14" r="12" /></svg>';
+const SPINNER = '<div class="spinner"></div>';
 
-    let pendingFiles = [];
-    let randomizeFilenameOn = false;
-    let noticeTimeout = null;
-    const infoCache = new Map();
-    const thumbUrls = new Map();
+let pendingFiles = [];
+let noticeTimeout = null;
+const infoCache = new Map();
+const thumbUrls = new Map();
 
-    randomizeFilename.addEventListener('click', () => {
-        randomizeFilename.classList.toggle('on');
-        randomizeFilenameOn = randomizeFilename.classList.contains('on');
-        randomizeFilename.setAttribute('aria-checked', randomizeFilenameOn);
+function randomFilename(length = 12) {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const values = new Uint32Array(length);
+    crypto.getRandomValues(values);
+    let result = "";
+    for (let i = 0; i < length; i++) result += chars[values[i] % chars.length];
+    return result;
+}
+
+function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+// some systems don't give me a file type, so i check the extension instead
+function fileKind(file) {
+    if (ACCEPTED_TYPES.includes(file.type)) return file.type;
+    return EXTENSION_TYPES[file.name.split(".").pop().toLowerCase()] || null;
+}
+
+function thumbFor(file) {
+    if (!thumbUrls.has(file)) thumbUrls.set(file, URL.createObjectURL(file));
+    return thumbUrls.get(file);
+}
+
+function releaseFile(file) {
+    if (thumbUrls.has(file)) URL.revokeObjectURL(thumbUrls.get(file));
+    thumbUrls.delete(file);
+    infoCache.delete(file);
+}
+
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function waitOrSkip(ms, el) {
+    return new Promise(resolve => {
+        const timer = setTimeout(finish, ms);
+        function finish() {
+            clearTimeout(timer);
+            el.removeEventListener("click", finish);
+            resolve();
+        }
+        el.addEventListener("click", finish, { once: true });
     });
+}
 
-    document.querySelectorAll('.faq-question').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const item = btn.closest('.faq-item');
-            const isOpen = item.classList.toggle('open');
-            btn.setAttribute('aria-expanded', isOpen);
-        });
-    });
+function showNotice(text) {
+    $("notice").textContent = text;
+    $("notice").hidden = false;
+    clearTimeout(noticeTimeout);
+    noticeTimeout = setTimeout(() => { $("notice").hidden = true; }, NOTICE_DELAY);
+}
 
+function ascii(bytes, start, length) {
+    let text = "";
+    for (let i = start; i < Math.min(start + length, bytes.length); i++) text += String.fromCharCode(bytes[i]);
+    return text;
+}
 
-    function randomFilename(length = 12) {
-        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        const values = new Uint32Array(length);
-        crypto.getRandomValues(values);
-        let result = '';
-        for (let i = 0; i < length; i++) result += chars[values[i] % chars.length];
-        return result;
+const TYPE_SIZES = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+
+function readIfd(view, tiffStart, offset, little) {
+    const entries = {};
+    const count = view.getUint16(tiffStart + offset, little);
+    for (let i = 0; i < count; i++) {
+        const at = tiffStart + offset + 2 + i * 12;
+        entries[view.getUint16(at, little)] = at;
     }
+    return entries;
+}
 
-    function formatBytes(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
+function readTag(view, tiffStart, little, entry) {
+    if (entry === undefined) return undefined;
+    const type = view.getUint16(entry + 2, little);
+    const count = view.getUint32(entry + 4, little);
+    const at = (TYPE_SIZES[type] || 1) * count > 4 ? tiffStart + view.getUint32(entry + 8, little) : entry + 8;
 
-    // some systems don't give me a file type, so i check the extension instead
-    function fileKind(file) {
-        if (ACCEPTED_TYPES.includes(file.type)) return file.type;
-        return EXTENSION_TYPES[file.name.split('.').pop().toLowerCase()] || null;
-    }
-
-    function thumbFor(file) {
-        if (!thumbUrls.has(file)) thumbUrls.set(file, URL.createObjectURL(file));
-        return thumbUrls.get(file);
-    }
-
-    function releaseFile(file) {
-        if (thumbUrls.has(file)) URL.revokeObjectURL(thumbUrls.get(file));
-        thumbUrls.delete(file);
-        infoCache.delete(file);
-    }
-
-    function wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function waitOrSkip(ms, el) {
-        return new Promise(resolve => {
-            const timer = setTimeout(finish, ms);
-            function finish() {
-                clearTimeout(timer);
-                el.removeEventListener('click', finish);
-                resolve();
-            }
-            el.addEventListener('click', finish, { once: true });
-        });
-    }
-
-    function showNotice(text) {
-        notice.textContent = text;
-        notice.hidden = false;
-        clearTimeout(noticeTimeout);
-        noticeTimeout = setTimeout(() => { notice.hidden = true; }, NOTICE_DELAY);
-    }
-
-
-    function ascii(bytes, start, length) {
-        let text = '';
-        for (let i = start; i < Math.min(start + length, bytes.length); i++) text += String.fromCharCode(bytes[i]);
-        return text;
-    }
-
-    const TYPE_SIZES = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
-
-    function readIfd(view, tiffStart, offset, little) {
-        const entries = {};
-        const count = view.getUint16(tiffStart + offset, little);
-        for (let i = 0; i < count; i++) {
-            const at = tiffStart + offset + 2 + i * 12;
-            entries[view.getUint16(at, little)] = at;
+    if (type === 2) {
+        let text = "";
+        for (let i = 0; i < Math.min(count, 256); i++) {
+            const c = view.getUint8(at + i);
+            if (c === 0) break;
+            text += String.fromCharCode(c);
         }
-        return entries;
+        return text.trim();
     }
-
-    function readTag(view, tiffStart, little, entry) {
-        if (entry === undefined) return undefined;
-        const type = view.getUint16(entry + 2, little);
-        const count = view.getUint32(entry + 4, little);
-        const at = (TYPE_SIZES[type] || 1) * count > 4 ? tiffStart + view.getUint32(entry + 8, little) : entry + 8;
-
-        if (type === 2) {
-            let text = '';
-            for (let i = 0; i < Math.min(count, 256); i++) {
-                const c = view.getUint8(at + i);
-                if (c === 0) break;
-                text += String.fromCharCode(c);
-            }
-            return text.trim();
-        }
-        if (type === 3) return view.getUint16(at, little);
-        if (type === 4) return view.getUint32(at, little);
-        if (type === 5) {
-            return Array.from({ length: Math.min(count, 8) }, (_, i) =>
-                view.getUint32(at + i * 8, little) / (view.getUint32(at + i * 8 + 4, little) || 1));
-        }
-        return undefined;
+    if (type === 3) return view.getUint16(at, little);
+    if (type === 4) return view.getUint32(at, little);
+    if (type === 5) {
+        return Array.from({ length: Math.min(count, 8) }, (_, i) =>
+            view.getUint32(at + i * 8, little) / (view.getUint32(at + i * 8 + 4, little) || 1));
     }
+    return undefined;
+}
 
-    // turns the gps format into normal coordinates
-    function formatGps(ifd, read) {
-        const toDegrees = (dms, ref) => Array.isArray(dms) && dms.length >= 3
-            ? (dms[0] + dms[1] / 60 + dms[2] / 3600) * (ref === 'S' || ref === 'W' ? -1 : 1)
-            : null;
-        const lat = toDegrees(read(ifd, 2), read(ifd, 1));
-        const lon = toDegrees(read(ifd, 4), read(ifd, 3));
-        return lat !== null && lon !== null && (lat || lon) ? `${lat.toFixed(5)}, ${lon.toFixed(5)}` : 'found';
-    }
+// turns the gps format into normal coordinates
+function formatGps(ifd, read) {
+    const toDegrees = (dms, ref) => Array.isArray(dms) && dms.length >= 3
+        ? (dms[0] + dms[1] / 60 + dms[2] / 3600) * (ref === "S" || ref === "W" ? -1 : 1)
+        : null;
+    const lat = toDegrees(read(ifd, 2), read(ifd, 1));
+    const lon = toDegrees(read(ifd, 4), read(ifd, 3));
+    return lat !== null && lon !== null && (lat || lon) ? `${lat.toFixed(5)}, ${lon.toFixed(5)}` : "found";
+}
 
-    // i only read what the preview needs, all tags are listed here https://exiftool.org/TagNames/EXIF.html
-    function parseTiff(view, tiffStart) {
-        const little = view.getUint16(tiffStart) === 0x4949;
-        const read = (ifd, tag) => {
-            try { return readTag(view, tiffStart, little, ifd[tag]); } catch { return undefined; }
-        };
-        const subIfd = (ifd, tag) => {
-            const pointer = read(ifd, tag);
-            try { return pointer ? readIfd(view, tiffStart, pointer, little) : null; } catch { return null; }
-        };
+// i only read what the preview needs
+function parseTiff(view, tiffStart) {
+    const little = view.getUint16(tiffStart) === 0x4949;
+    const read = (ifd, tag) => {
+        try { return readTag(view, tiffStart, little, ifd[tag]); } catch { return undefined; }
+    };
+    const subIfd = (ifd, tag) => {
+        const pointer = read(ifd, tag);
+        try { return pointer ? readIfd(view, tiffStart, pointer, little) : null; } catch { return null; }
+    };
 
-        const ifd0 = readIfd(view, tiffStart, view.getUint32(tiffStart + 4, little), little);
-        const exifIfd = subIfd(ifd0, 0x8769) || {};
-        const gpsIfd = subIfd(ifd0, 0x8825);
-        const date = read(exifIfd, 0x9003) || read(ifd0, 0x0132);
+    const ifd0 = readIfd(view, tiffStart, view.getUint32(tiffStart + 4, little), little);
+    const exifIfd = subIfd(ifd0, 0x8769) || {};
+    const gpsIfd = subIfd(ifd0, 0x8825);
+    const date = read(exifIfd, 0x9003) || read(ifd0, 0x0132);
 
-        return {
-            make: read(ifd0, 0x010F),
-            model: read(ifd0, 0x0110),
-            orientation: read(ifd0, 0x0112),
-            dateTime: date ? date.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3') : undefined,
-            gps: gpsIfd ? formatGps(gpsIfd, read) : undefined
-        };
-    }
+    return {
+        make: read(ifd0, 0x010F),
+        model: read(ifd0, 0x0110),
+        orientation: read(ifd0, 0x0112),
+        dateTime: date ? date.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3") : undefined,
+        gps: gpsIfd ? formatGps(gpsIfd, read) : undefined
+    };
+}
 
-    function addExif(info, view, start) {
-        info.other.push('exif details');
-        try {
-            Object.assign(info, parseTiff(view, start));
-        } catch {
-        }
-    }
+function addExif(info, view, start) {
+    info.other.push("EXIF details");
+    try {
+        Object.assign(info, parseTiff(view, start));
+    } catch {}
+}
 
-    // the preview and the stripping both walk a file through these, so they always agree on what's in it
-    function* jpegSegments(bytes, view) {
-        let offset = 2;
-        while (offset < bytes.length - 3) {
-            if (bytes[offset] !== 0xFF) { offset++; continue; }
-            const marker = bytes[offset + 1];
-            if (marker === 0xFF) { offset++; continue; }
-            if (marker === 0xD9) return;
-            if (marker === 0xDA) {
-                yield { marker, offset, end: findJpegEnd(bytes, view, offset) };
-                return;
-            }
-            if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) {
-                yield { marker, offset, end: offset + 2 };
-                offset += 2;
-                continue;
-            }
-            const end = offset + 2 + view.getUint16(offset + 2);
-            yield { marker, offset, data: offset + 4, end };
-            offset = end;
-        }
-    }
-
-    function* pngChunks(bytes, view) {
-        let offset = 8;
-        while (offset + 12 <= bytes.length) {
-            const type = ascii(bytes, offset + 4, 4);
-            const end = offset + 12 + view.getUint32(offset);
-            yield { type, offset, data: offset + 8, end };
-            if (type === 'IEND') return;
-            offset = end;
-        }
-    }
-
-    function* webpChunks(bytes, view) {
-        const riffEnd = Math.min(bytes.length, 8 + view.getUint32(4, true));
-        let offset = 12;
-        while (offset + 8 <= riffEnd) {
-            const fourcc = ascii(bytes, offset, 4);
-            const size = view.getUint32(offset + 4, true);
-            const end = offset + 8 + size + (size % 2);
-            yield { fourcc, offset, data: offset + 8, end };
-            offset = end;
-        }
-    }
-
-    function inspectJpeg(bytes, view, info) {
-        for (const { marker, data, end } of jpegSegments(bytes, view)) {
-            if (marker === 0xDA && end < bytes.length - 16) info.other.push('trailing data');
-            else if (marker === 0xE1 && ascii(bytes, data, 6) === 'Exif\0\0') addExif(info, view, data + 6);
-            else if (marker === 0xE1 && ascii(bytes, data, 23) === 'http://ns.adobe.com/xap') info.other.push('xmp');
-            else if (marker === 0xE2 && ascii(bytes, data, 3) === 'MPF') info.other.push('extra images');
-            else if (marker === 0xED) info.other.push('iptc');
-            else if (marker === 0xFE) info.other.push('comment');
-        }
-    }
-
-    function inspectPng(bytes, view, info) {
-        for (const { type, data } of pngChunks(bytes, view)) {
-            if (type === 'eXIf') addExif(info, view, data);
-            else if (type === 'tIME') info.other.push('timestamp');
-            else if (type === 'iTXt' && ascii(bytes, data, 17) === 'XML:com.adobe.xmp') info.other.push('xmp');
-            else if (type === 'tEXt' || type === 'zTXt' || type === 'iTXt') info.other.push('text');
-        }
-    }
-
-    function inspectWebp(bytes, view, info) {
-        for (const { fourcc, data } of webpChunks(bytes, view)) {
-            if (fourcc === 'EXIF') addExif(info, view, ascii(bytes, data, 6) === 'Exif\0\0' ? data + 6 : data);
-            else if (fourcc === 'XMP ') info.other.push('xmp');
-        }
-    }
-
-    function inspectFile(buffer, kind) {
-        const info = { other: [] };
-        const bytes = new Uint8Array(buffer);
-        const view = new DataView(buffer);
-        try {
-            if (kind === 'image/jpeg') inspectJpeg(bytes, view, info);
-            else if (kind === 'image/png') inspectPng(bytes, view, info);
-            else if (kind === 'image/webp') inspectWebp(bytes, view, info);
-        } catch {
-        }
-        return info;
-    }
-
-    function getInfoFor(file) {
-        if (!infoCache.has(file)) {
-            const promise = file.arrayBuffer()
-                .then(buffer => inspectFile(buffer, fileKind(file)))
-                .catch(() => ({ other: [] }));
-            infoCache.set(file, promise);
-        }
-        return infoCache.get(file);
-    }
-
-    function hasMetadata(info) {
-        return !!(info.make || info.model || info.gps || info.dateTime || info.other.length);
-    }
-
-    function metadataRows(info) {
-        const camera = info.make && info.model && info.model.startsWith(info.make)
-            ? info.model
-            : [info.make, info.model].filter(Boolean).join(' ');
-        const other = [...new Set(info.other)].join(', ');
-        return [
-            ['camera', camera || 'not found', !!camera],
-            ['gps location', info.gps || 'not found', !!info.gps],
-            ['date taken', info.dateTime || 'not found', !!info.dateTime],
-            ['other metadata', other || 'none', !!other]
-        ];
-    }
-
-
-    // tiny exif block with only the orientation in it
-    function buildMinimalOrientationExif(orientation) {
-        return new Uint8Array([
-            0xFF, 0xE1, 0x00, 0x22,
-            0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
-            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
-            0x01, 0x00,
-            0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, orientation & 0xFF, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00
-        ]);
-    }
-
-    // color profiles stay so colors don't change, nothing personal in there
-    function isRenderingSegment(bytes, marker, data) {
-        return (marker === 0xE2 && ascii(bytes, data, 11) === 'ICC_PROFILE')
-            || (marker === 0xEE && ascii(bytes, data, 5) === 'Adobe');
-    }
-
-    // phones sometimes add extra stuff after the image that can have metadata too, so i cut it off there
-    function findJpegEnd(bytes, view, sos) {
-        let i = sos;
-        while (i < bytes.length - 3) {
-            i += 2 + view.getUint16(i + 2);
-            while (i < bytes.length - 1) {
-                const next = bytes[i + 1];
-                if (bytes[i] === 0xFF && next !== 0x00 && next !== 0xFF && !(next >= 0xD0 && next <= 0xD7)) break;
-                i++;
-            }
-            if (i >= bytes.length - 1) return bytes.length;
-            if (bytes[i + 1] === 0xD9) return i + 2;
-        }
-        return bytes.length;
-    }
-
-    // i only cut out the metadata parts, the image itself stays exactly the same
-    // orientation gets added back so photos don't end up sideways
-    function stripJpegParts(buffer, orientation) {
-        const bytes = new Uint8Array(buffer);
-        const view = new DataView(buffer);
-        if (view.getUint16(0) !== 0xFFD8) throw new Error('not a jpeg');
-
-        const parts = [bytes.subarray(0, 2)];
-        if (orientation && orientation !== 1) parts.push(buildMinimalOrientationExif(orientation));
-
-        let foundImage = false;
-        for (const { marker, offset, data, end } of jpegSegments(bytes, view)) {
-            if (marker === 0xDA) foundImage = true;
-            const isMetadata = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
-            if (!isMetadata || isRenderingSegment(bytes, marker, data)) parts.push(bytes.subarray(offset, end));
-        }
-        if (!foundImage) throw new Error('no image data found');
-        return parts;
-    }
-
-    const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-    const PNG_STRIP = new Set(['tEXt', 'zTXt', 'iTXt', 'eXIf', 'tIME']);
-
-    // same idea for png
-    function stripPngParts(buffer) {
-        const bytes = new Uint8Array(buffer);
-        const view = new DataView(buffer);
-        if (!PNG_SIGNATURE.every((b, i) => bytes[i] === b)) throw new Error('not a png');
-
-        const parts = [bytes.subarray(0, 8)];
-        let foundEnd = false;
-        for (const { type, offset, end } of pngChunks(bytes, view)) {
-            if (!PNG_STRIP.has(type)) parts.push(bytes.subarray(offset, end));
-            if (type === 'IEND') foundEnd = true;
-        }
-        if (!foundEnd) throw new Error('png ended early');
-        return parts;
-    }
-
-    // same for webp, then i fix the file size in the header
-    function stripWebpParts(buffer) {
-        const bytes = new Uint8Array(buffer);
-        const view = new DataView(buffer);
-        if (ascii(bytes, 0, 4) !== 'RIFF' || ascii(bytes, 8, 4) !== 'WEBP') throw new Error('not a webp');
-
-        const chunks = [];
-        for (const { fourcc, offset, end } of webpChunks(bytes, view)) {
-            if (fourcc === 'VP8X') {
-                // the header still says there's exif, so i turn that off
-                const chunk = bytes.slice(offset, end);
-                chunk[8] &= ~0x0C;
-                chunks.push(chunk);
-            } else if (fourcc !== 'EXIF' && fourcc !== 'XMP ') {
-                chunks.push(bytes.subarray(offset, end));
-            }
-        }
-
-        const riffSize = new Uint8Array(4);
-        new DataView(riffSize.buffer).setUint32(0, chunks.reduce((sum, c) => sum + c.length, 4), true);
-        return [bytes.subarray(0, 4), riffSize, bytes.subarray(8, 12), ...chunks];
-    }
-
-    function stripMetadataParts(kind, buffer, orientation) {
-        if (kind === 'image/jpeg') return stripJpegParts(buffer, orientation);
-        if (kind === 'image/png') return stripPngParts(buffer);
-        if (kind === 'image/webp') return stripWebpParts(buffer);
-        throw new Error('unsupported file');
-    }
-
-
-    // textContent on purpose, exif text comes from the file and could contain code
-    function createInfoRow(label, value, found) {
-        const row = document.createElement('div');
-        row.className = 'row';
-        const labelEl = document.createElement('label');
-        labelEl.textContent = label;
-        const valueEl = document.createElement('span');
-        valueEl.className = 'value' + (found ? ' found' : '');
-        valueEl.textContent = value;
-        row.append(labelEl, valueEl);
-        return row;
-    }
-
-    function renderInfo(container, sections) {
-        container.replaceChildren(...sections.flatMap(({ heading, rows }) => {
-            const title = document.createElement('div');
-            title.className = 'compare-heading';
-            title.textContent = heading;
-            return [title, ...rows.map(([label, value, found]) => createInfoRow(label, value, found))];
-        }));
-        container.hidden = false;
-    }
-
-    function createReviewRow(file) {
-        const row = document.createElement('div');
-        row.className = 'file-row';
-        row.innerHTML = `
-            <img class="file-thumb" alt="">
-            <span class="file-name"></span>
-            <span class="review-size"></span>
-            <span class="review-badge">checking…</span>
-            <button type="button" class="review-remove" aria-label="remove file">${CLOSE_ICON}</button>
-        `;
-        row.querySelector('.file-thumb').src = thumbFor(file);
-        row.querySelector('.file-name').textContent = file.name;
-        row.querySelector('.review-size').textContent = formatBytes(file.size);
-        row.querySelector('.review-remove').addEventListener('click', () => {
-            pendingFiles = pendingFiles.filter(f => f !== file);
-            releaseFile(file);
-            renderReview();
-        });
-
-        const badge = row.querySelector('.review-badge');
-        getInfoFor(file).then(info => {
-            const found = hasMetadata(info);
-            badge.textContent = found ? 'metadata found' : 'clean';
-            badge.classList.toggle('found', found);
-            if (pendingFiles.length === 1 && pendingFiles[0] === file) {
-                renderInfo(reviewPreview, [{ heading: "what's inside this file", rows: metadataRows(info) }]);
-            }
-        });
-        return row;
-    }
-
-    function renderReview() {
-        if (!pendingFiles.length) {
-            review.hidden = true;
-            dropzone.hidden = false;
+function* jpegSegments(bytes, view) {
+    let offset = 2;
+    while (offset < bytes.length - 3) {
+        if (bytes[offset] !== 0xFF) { offset++; continue; }
+        const marker = bytes[offset + 1];
+        if (marker === 0xFF) { offset++; continue; }
+        if (marker === 0xD9) return;
+        if (marker === 0xDA) {
+            yield { marker, offset, end: findJpegEnd(bytes, view, offset) };
             return;
         }
+        if ((marker >= 0xD0 && marker <= 0xD7) || marker === 0x01) {
+            yield { marker, offset, end: offset + 2 };
+            offset += 2;
+            continue;
+        }
+        const end = offset + 2 + view.getUint16(offset + 2);
+        yield { marker, offset, data: offset + 4, end };
+        offset = end;
+    }
+}
 
-        dropzone.hidden = true;
-        review.hidden = false;
-        reviewPreview.hidden = true;
-        addMoreBtn.hidden = pendingFiles.length >= MAX_FILES;
+function* pngChunks(bytes, view) {
+    let offset = 8;
+    while (offset + 12 <= bytes.length) {
+        const type = ascii(bytes, offset + 4, 4);
+        const end = offset + 12 + view.getUint32(offset);
+        yield { type, offset, data: offset + 8, end };
+        if (type === "IEND") return;
+        offset = end;
+    }
+}
 
-        const totalSize = pendingFiles.reduce((sum, f) => sum + f.size, 0);
-        reviewSummary.textContent = `${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} · ${formatBytes(totalSize)} total`;
-        reviewRows.replaceChildren(...pendingFiles.map(createReviewRow));
+function* webpChunks(bytes, view) {
+    const riffEnd = Math.min(bytes.length, 8 + view.getUint32(4, true));
+    let offset = 12;
+    while (offset + 8 <= riffEnd) {
+        const fourcc = ascii(bytes, offset, 4);
+        const size = view.getUint32(offset + 4, true);
+        const end = offset + 8 + size + (size % 2);
+        yield { fourcc, offset, data: offset + 8, end };
+        offset = end;
+    }
+}
+
+function inspectJpeg(bytes, view, info) {
+    for (const { marker, data, end } of jpegSegments(bytes, view)) {
+        if (marker === 0xDA && end < bytes.length - 16) info.other.push("Trailing data");
+        else if (marker === 0xE1 && ascii(bytes, data, 6) === "Exif\0\0") addExif(info, view, data + 6);
+        else if (marker === 0xE1 && ascii(bytes, data, 23) === "http://ns.adobe.com/xap") info.other.push("XMP");
+        else if (marker === 0xE2 && ascii(bytes, data, 3) === "MPF") info.other.push("Extra images");
+        else if (marker === 0xED) info.other.push("IPTC");
+        else if (marker === 0xFE) info.other.push("Comment");
+    }
+}
+
+function inspectPng(bytes, view, info) {
+    for (const { type, data } of pngChunks(bytes, view)) {
+        if (type === "eXIf") addExif(info, view, data);
+        else if (type === "tIME") info.other.push("Timestamp");
+        else if (type === "iTXt" && ascii(bytes, data, 17) === "XML:com.adobe.xmp") info.other.push("XMP");
+        else if (type === "tEXt" || type === "zTXt" || type === "iTXt") info.other.push("Text");
+    }
+}
+
+function inspectWebp(bytes, view, info) {
+    for (const { fourcc, data } of webpChunks(bytes, view)) {
+        if (fourcc === "EXIF") addExif(info, view, ascii(bytes, data, 6) === "Exif\0\0" ? data + 6 : data);
+        else if (fourcc === "XMP ") info.other.push("XMP");
+    }
+}
+
+function inspectFile(buffer, kind) {
+    const info = { other: [] };
+    const bytes = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+    try {
+        if (kind === "image/jpeg") inspectJpeg(bytes, view, info);
+        else if (kind === "image/png") inspectPng(bytes, view, info);
+        else if (kind === "image/webp") inspectWebp(bytes, view, info);
+    } catch {}
+    return info;
+}
+
+function getInfoFor(file) {
+    if (!infoCache.has(file)) {
+        const promise = file.arrayBuffer()
+            .then(buffer => inspectFile(buffer, fileKind(file)))
+            .catch(() => ({ other: [] }));
+        infoCache.set(file, promise);
+    }
+    return infoCache.get(file);
+}
+
+function hasMetadata(info) {
+    return !!(info.make || info.model || info.gps || info.dateTime || info.other.length);
+}
+
+function metadataRows(info) {
+    const camera = info.make && info.model && info.model.startsWith(info.make)
+        ? info.model
+        : [info.make, info.model].filter(Boolean).join(" ");
+    const other = [...new Set(info.other)].join(", ");
+    return [
+        ["Camera", camera || "Not found", !!camera],
+        ["GPS location", info.gps || "Not found", !!info.gps],
+        ["Date taken", info.dateTime || "Not found", !!info.dateTime],
+        ["Other metadata", other || "None", !!other]
+    ];
+}
+
+
+// tiny exif block with only the orientation in it
+function buildMinimalOrientationExif(orientation) {
+    return new Uint8Array([
+        0xFF, 0xE1, 0x00, 0x22,
+        0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+        0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+        0x01, 0x00,
+        0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, orientation & 0xFF, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00
+    ]);
+}
+
+// color profiles stay so colors don't change, nothing personal in there
+function isRenderingSegment(bytes, marker, data) {
+    return (marker === 0xE2 && ascii(bytes, data, 11) === "ICC_PROFILE")
+        || (marker === 0xEE && ascii(bytes, data, 5) === "Adobe");
+}
+
+// phones sometimes add extra stuff after the image that can have metadata too, so i cut it off there
+function findJpegEnd(bytes, view, sos) {
+    let i = sos;
+    while (i < bytes.length - 3) {
+        i += 2 + view.getUint16(i + 2);
+        while (i < bytes.length - 1) {
+            const next = bytes[i + 1];
+            if (bytes[i] === 0xFF && next !== 0x00 && next !== 0xFF && !(next >= 0xD0 && next <= 0xD7)) break;
+            i++;
+        }
+        if (i >= bytes.length - 1) return bytes.length;
+        if (bytes[i + 1] === 0xD9) return i + 2;
+    }
+    return bytes.length;
+}
+
+// i only cut out the metadata parts, the image stays exactly the same, orientation is added back so photos aren't sideways
+function stripJpegParts(buffer, orientation) {
+    const bytes = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+    if (view.getUint16(0) !== 0xFFD8) throw new Error("not a jpeg");
+
+    const parts = [bytes.subarray(0, 2)];
+    if (orientation && orientation !== 1) parts.push(buildMinimalOrientationExif(orientation));
+
+    let foundImage = false;
+    for (const { marker, offset, data, end } of jpegSegments(bytes, view)) {
+        if (marker === 0xDA) foundImage = true;
+        const isMetadata = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
+        if (!isMetadata || isRenderingSegment(bytes, marker, data)) parts.push(bytes.subarray(offset, end));
+    }
+    if (!foundImage) throw new Error("no image data found");
+    return parts;
+}
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+const PNG_STRIP = new Set(["tEXt", "zTXt", "iTXt", "eXIf", "tIME"]);
+
+function stripPngParts(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+    if (!PNG_SIGNATURE.every((b, i) => bytes[i] === b)) throw new Error("not a png");
+
+    const parts = [bytes.subarray(0, 8)];
+    let foundEnd = false;
+    for (const { type, offset, end } of pngChunks(bytes, view)) {
+        if (!PNG_STRIP.has(type)) parts.push(bytes.subarray(offset, end));
+        if (type === "IEND") foundEnd = true;
+    }
+    if (!foundEnd) throw new Error("png ended early");
+    return parts;
+}
+
+// the file size in the header has to be fixed after cutting
+function stripWebpParts(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+    if (ascii(bytes, 0, 4) !== "RIFF" || ascii(bytes, 8, 4) !== "WEBP") throw new Error("not a webp");
+
+    const chunks = [];
+    for (const { fourcc, offset, end } of webpChunks(bytes, view)) {
+        if (fourcc === "VP8X") {
+            const chunk = bytes.slice(offset, end);
+            chunk[8] &= ~0x0C;
+            chunks.push(chunk);
+        } else if (fourcc !== "EXIF" && fourcc !== "XMP ") {
+            chunks.push(bytes.subarray(offset, end));
+        }
     }
 
-    function addFiles(fileList) {
-        const skipped = { unsupported: 0, tooBig: 0, duplicate: 0, overLimit: 0 };
-        Array.from(fileList).forEach(file => {
-            const duplicate = pendingFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
-            if (!fileKind(file)) skipped.unsupported++;
-            else if (file.size > MAX_SIZE) skipped.tooBig++;
-            else if (duplicate) skipped.duplicate++;
-            else if (pendingFiles.length >= MAX_FILES) skipped.overLimit++;
-            else pendingFiles.push(file);
-        });
+    const riffSize = new Uint8Array(4);
+    new DataView(riffSize.buffer).setUint32(0, chunks.reduce((sum, c) => sum + c.length, 4), true);
+    return [bytes.subarray(0, 4), riffSize, bytes.subarray(8, 12), ...chunks];
+}
 
-        const reasons = [
-            skipped.unsupported && `${skipped.unsupported} unsupported`,
-            skipped.tooBig && `${skipped.tooBig} over 100mb`,
-            skipped.duplicate && `${skipped.duplicate} already added`,
-            skipped.overLimit && `${skipped.overLimit} over the 8 file limit`
-        ].filter(Boolean);
-        if (reasons.length) showNotice(`skipped ${reasons.join(', ')}`);
+function stripMetadataParts(kind, buffer, orientation) {
+    if (kind === "image/jpeg") return stripJpegParts(buffer, orientation);
+    if (kind === "image/png") return stripPngParts(buffer);
+    if (kind === "image/webp") return stripWebpParts(buffer);
+    throw new Error("unsupported file");
+}
+
+function getInfoFor(file) {
+    if (!infoCache.has(file)) {
+        const promise = file.arrayBuffer()
+            .then(buffer => inspectFile(buffer, fileKind(file)))
+            .catch(() => ({ other: [] }));
+        infoCache.set(file, promise);
+    }
+    return infoCache.get(file);
+}
+
+// textContent on purpose, exif text comes from the file and could contain code
+function createInfoRow(label, value, found) {
+    const row = document.createElement("div");
+    row.className = "info-row";
+    const valueEl = document.createElement("span");
+    valueEl.className = "value" + (found ? " found" : "");
+    valueEl.textContent = value;
+    row.append(label, valueEl);
+    return row;
+}
+
+function renderInfo(container, sections) {
+    container.replaceChildren(...sections.flatMap(({ heading, rows }) => {
+        const title = document.createElement("h2");
+        title.textContent = heading;
+        return [title, ...rows.map(([label, value, found]) => createInfoRow(label, value, found))];
+    }));
+    container.hidden = false;
+}
+
+function createReviewRow(file) {
+    const row = document.createElement("div");
+    row.className = "file-row";
+    row.innerHTML = `
+        <img class="file-thumb" alt="">
+        <span class="file-name"></span>
+        <span class="badge sub"></span>
+        <button type="button" class="remove">${X_ICON}</button>
+    `;
+    row.querySelector(".file-thumb").src = thumbFor(file);
+    row.querySelector(".file-name").textContent = `${file.name} · ${formatBytes(file.size)}`;
+    row.querySelector(".badge").textContent = "Checking…";
+    row.querySelector(".remove").addEventListener("click", () => {
+        pendingFiles = pendingFiles.filter(f => f !== file);
+        releaseFile(file);
         renderReview();
-    }
+    });
 
-
-    async function processImage(file) {
-        const kind = fileKind(file);
-        const [buffer, info] = await Promise.all([file.arrayBuffer(), getInfoFor(file), wait(PROCESS_DELAY)]);
-        const blob = new Blob(stripMetadataParts(kind, buffer, info.orientation), { type: kind });
-        return { blob, ext: OUTPUT_EXTENSIONS[kind], info };
-    }
-
-    function cleanName(file, ext) {
-        if (randomizeFilenameOn) return `${randomFilename()}.${ext}`;
-        const dot = file.name.lastIndexOf('.');
-        return `${dot > -1 ? file.name.slice(0, dot) : file.name}-clean.${ext}`;
-    }
-
-    function downloadBlob(blob, name) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = name;
-        a.click();
-        // if i clean up right away, some browsers cancel the download
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-
-    function createRow(file) {
-        const row = document.createElement('div');
-        row.className = 'file-row';
-        row.innerHTML = `
-            <img class="file-thumb" alt="">
-            <span class="file-name"></span>
-            <div class="status-icon small">
-                <div class="spinner-ring"></div>
-            </div>
-        `;
-        row.querySelector('.file-name').textContent = file.name;
-        row.querySelector('.file-thumb').src = thumbFor(file);
-        return {
-            el: row,
-            icon: row.querySelector('.status-icon'),
-            name: row.querySelector('.file-name')
-        };
-    }
-
-    function summaryText(done, total) {
-        if (done === 0) return total > 1 ? "files couldn't be cleaned" : "file couldn't be cleaned";
-        if (done < total) return `${done} of ${total} downloaded`;
-        return total > 1 ? 'all files downloaded' : 'downloaded';
-    }
-
-    function renderCompare({ info, originalSize, cleanedSize }) {
-        renderInfo(compare, [
-            { heading: 'before', rows: [['file size', formatBytes(originalSize), false], ...metadataRows(info)] },
-            { heading: 'after', rows: [['file size', formatBytes(cleanedSize), false], ['metadata', 'removed', false]] }
-        ]);
-    }
-
-    async function handleFiles(files) {
-        review.hidden = true;
-        dropzone.hidden = true;
-        compare.hidden = true;
-        batch.hidden = false;
-        batchStatusIcon.innerHTML = '<div class="spinner-ring"></div>';
-
-        const rows = files.map(createRow);
-        fileRows.replaceChildren(...rows.map(row => row.el));
-
-        let done = 0;
-        let singleResult = null;
-
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const row = rows[i];
-            batchFooterText.textContent = `removing metadata (${i + 1}/${files.length})`;
-            row.icon.classList.add('visible');
-
-            try {
-                const { blob, ext, info } = await processImage(file);
-                const name = cleanName(file, ext);
-                downloadBlob(blob, name);
-                row.icon.innerHTML = CHECK_ICON;
-                row.name.textContent = name;
-                row.name.classList.add('updated');
-                done++;
-                if (files.length === 1) singleResult = { info, originalSize: file.size, cleanedSize: blob.size };
-            } catch {
-                // never hand out a file that isn't clean
-                row.icon.innerHTML = FAIL_ICON;
-                row.name.textContent = `${file.name} couldn't be cleaned`;
-                row.name.classList.add('failed');
-            }
+    const badge = row.querySelector(".badge");
+    getInfoFor(file).then(info => {
+        const found = hasMetadata(info);
+        badge.textContent = found ? "Metadata found" : "Clean";
+        badge.classList.toggle("found", found);
+        if (pendingFiles.length === 1 && pendingFiles[0] === file) {
+            renderInfo($("reviewPreview"), [{ heading: "What's inside this file", rows: metadataRows(info) }]);
         }
+    });
+    return row;
+}
 
-        if (singleResult) renderCompare(singleResult);
-
-        batchStatusIcon.innerHTML = RING + (done ? CHECK_ICON : FAIL_ICON);
-        batchFooterText.textContent = `${summaryText(done, files.length)} · tap to dismiss`;
-        batchStatusIcon.disabled = false;
-
-        await waitOrSkip(DISMISS_DELAY, batchStatusIcon);
-        batchStatusIcon.disabled = true;
-        files.forEach(releaseFile);
-        batch.hidden = true;
-        dropzone.hidden = false;
+function renderReview() {
+    if (!pendingFiles.length) {
+        $("review").hidden = true;
+        $("dropzone").hidden = false;
+        return;
     }
 
+    $("dropzone").hidden = true;
+    $("review").hidden = false;
+    $("reviewPreview").hidden = true;
+    $("addMore").hidden = pendingFiles.length >= MAX_FILES;
 
-    // otherwise the browser opens the image if you miss the dropzone
-    ['dragover', 'drop'].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
+    const totalSize = pendingFiles.reduce((sum, f) => sum + f.size, 0);
+    $("reviewSummary").textContent = `${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} · ${formatBytes(totalSize)} total`;
+    $("reviewRows").replaceChildren(...pendingFiles.map(createReviewRow));
+}
 
-    dropzone.addEventListener('dragover', () => dropzone.classList.add('drag-over'));
-    dropzone.addEventListener('dragleave', e => {
-        if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('drag-over');
-    });
-    dropzone.addEventListener('drop', e => {
-        dropzone.classList.remove('drag-over');
-        addFiles(e.dataTransfer.files);
-    });
-
-    review.addEventListener('drop', e => addFiles(e.dataTransfer.files));
-    addMoreBtn.addEventListener('click', () => fileInput.click());
-
-    fileInput.addEventListener('change', () => {
-        addFiles(fileInput.files);
-        fileInput.value = '';
-    });
-
-    processBtn.addEventListener('click', () => {
-        const files = pendingFiles;
-        pendingFiles = [];
-        handleFiles(files);
+function addFiles(fileList) {
+    const skipped = { unsupported: 0, tooBig: 0, duplicate: 0, overLimit: 0 };
+    Array.from(fileList).forEach(file => {
+        const duplicate = pendingFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+        if (!fileKind(file)) skipped.unsupported++;
+        else if (file.size > MAX_SIZE) skipped.tooBig++;
+        else if (duplicate) skipped.duplicate++;
+        else if (pendingFiles.length >= MAX_FILES) skipped.overLimit++;
+        else pendingFiles.push(file);
     });
 
-    // starfield background
-    (function () {
-        const layer = document.getElementById('starfield');
-        if (!layer) return;
+    const reasons = [
+        skipped.unsupported && `${skipped.unsupported} unsupported`,
+        skipped.tooBig && `${skipped.tooBig} over 100 MB`,
+        skipped.duplicate && `${skipped.duplicate} already added`,
+        skipped.overLimit && `${skipped.overLimit} over the 8 file limit`
+    ].filter(Boolean);
+    if (reasons.length) showNotice(`Skipped ${reasons.join(", ")}`);
+    renderReview();
+}
 
-        const count = 40;
+async function processImage(file) {
+    const kind = fileKind(file);
+    const [buffer, info] = await Promise.all([file.arrayBuffer(), getInfoFor(file), wait(PROCESS_DELAY)]);
+    const blob = new Blob(stripMetadataParts(kind, buffer, info.orientation), { type: kind });
+    return { blob, ext: OUTPUT_EXTENSIONS[kind], info };
+}
 
-        for (let i = 0; i < count; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
+function cleanName(file, ext) {
+    if ($("randomize").checked) return `${randomFilename()}.${ext}`;
+    const dot = file.name.lastIndexOf(".");
+    return `${dot > -1 ? file.name.slice(0, dot) : file.name}-clean.${ext}`;
+}
 
-            const size = 1 + Math.random() * 2.5;
-            const driftDuration = 40 + Math.random() * 40;
-            const twinkleDuration = 3 + Math.random() * 4;
+function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    // if i clean up right away, some browsers cancel the download
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
-            star.style.width = size + 'px';
-            star.style.height = size + 'px';
-            star.style.left = Math.random() * 100 + 'vw';
-            star.style.top = Math.random() * 100 + 'vh';
-            star.style.setProperty('--drift-x', (Math.random() * 50 - 25).toFixed(1) + 'vw');
-            star.style.setProperty('--drift-y', (Math.random() * 50 - 25).toFixed(1) + 'vh');
-            star.style.setProperty('--star-min', (0.05 + Math.random() * 0.1).toFixed(2));
-            star.style.setProperty('--star-max', (0.25 + Math.random() * 0.35).toFixed(2));
-            star.style.animationDuration = `${driftDuration.toFixed(1)}s, ${twinkleDuration.toFixed(1)}s`;
-            star.style.animationDelay = `${(Math.random() * -driftDuration).toFixed(1)}s, ${(Math.random() * -twinkleDuration).toFixed(1)}s`;
+function createRow(file) {
+    const row = document.createElement("div");
+    row.className = "file-row";
+    row.innerHTML = `
+        <img class="file-thumb" alt="">
+        <span class="file-name"></span>
+        <div class="status small">${SPINNER}</div>
+    `;
+    row.querySelector(".file-name").textContent = file.name;
+    row.querySelector(".file-thumb").src = thumbFor(file);
+    return {
+        el: row,
+        icon: row.querySelector(".status"),
+        name: row.querySelector(".file-name")
+    };
+}
 
-            layer.appendChild(star);
+function summaryText(done, total) {
+    if (done === 0) return total > 1 ? "Files couldn't be cleaned" : "File couldn't be cleaned";
+    if (done < total) return `${done} of ${total} downloaded`;
+    return total > 1 ? "All files downloaded" : "Downloaded";
+}
+
+function renderCompare({ info, originalSize, cleanedSize }) {
+    renderInfo($("compare"), [
+        { heading: "Before", rows: [["File size", formatBytes(originalSize), false], ...metadataRows(info)] },
+        { heading: "After", rows: [["File size", formatBytes(cleanedSize), false], ["Metadata", "Removed", false]] }
+    ]);
+}
+
+async function handleFiles(files) {
+    $("review").hidden = true;
+    $("dropzone").hidden = true;
+    $("compare").hidden = true;
+    $("batch").hidden = false;
+    $("batchStatus").innerHTML = SPINNER;
+
+    const rows = files.map(createRow);
+    $("fileRows").replaceChildren(...rows.map(row => row.el));
+
+    let done = 0;
+    let singleResult = null;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const row = rows[i];
+        $("batchText").textContent = `Removing metadata (${i + 1}/${files.length})`;
+        row.icon.classList.add("visible");
+
+        try {
+            const { blob, ext, info } = await processImage(file);
+            const name = cleanName(file, ext);
+            downloadBlob(blob, name);
+            row.icon.innerHTML = CHECK_ICON;
+            row.name.textContent = name;
+            row.name.classList.add("updated");
+            done++;
+            if (files.length === 1) singleResult = { info, originalSize: file.size, cleanedSize: blob.size };
+        } catch {
+            // never hand out a file that isn't clean
+            row.icon.innerHTML = FAIL_ICON;
+            row.name.textContent = `${file.name} couldn't be cleaned`;
+            row.name.classList.add("failed");
         }
-    })();
+    }
+
+    if (singleResult) renderCompare(singleResult);
+
+    $("batchStatus").innerHTML = RING + (done ? CHECK_ICON : FAIL_ICON);
+    $("batchText").textContent = `${summaryText(done, files.length)} · Tap to dismiss`;
+    $("batchStatus").disabled = false;
+
+    await waitOrSkip(DISMISS_DELAY, $("batchStatus"));
+    $("batchStatus").disabled = true;
+    files.forEach(releaseFile);
+    $("batch").hidden = true;
+    $("dropzone").hidden = false;
+}
+
+document.querySelectorAll(".faq-question").forEach(btn => {
+    btn.addEventListener("click", () => {
+        btn.closest(".faq-item").classList.toggle("open");
+    });
+});
+
+// otherwise the browser opens the image if you miss the dropzone
+["dragover", "drop"].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
+
+$("dropzone").addEventListener("dragover", () => $("dropzone").classList.add("drag-over"));
+$("dropzone").addEventListener("dragleave", e => {
+    if (!$("dropzone").contains(e.relatedTarget)) $("dropzone").classList.remove("drag-over");
+});
+$("dropzone").addEventListener("drop", e => {
+    $("dropzone").classList.remove("drag-over");
+    addFiles(e.dataTransfer.files);
+});
+
+$("review").addEventListener("drop", e => addFiles(e.dataTransfer.files));
+$("addMore").addEventListener("click", () => $("fileInput").click());
+
+$("fileInput").addEventListener("change", () => {
+    addFiles($("fileInput").files);
+    $("fileInput").value = "";
+});
+
+$("process").addEventListener("click", () => {
+    const files = pendingFiles;
+    pendingFiles = [];
+    handleFiles(files);
+});
+
 </script>
 </body>
 </html>
