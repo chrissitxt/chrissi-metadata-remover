@@ -15,3 +15,17 @@ Reads JPEG, PNG, and WebP files as raw bytes and removes the metadata segments (
 ## How it works
 
 Everything runs in the browser. Files are never uploaded to a server or processed anywhere else.
+
+## Design
+
+Font: Lora (SIL Open Font License), weight 500, 16px text and 20px heading.
+
+Design tokens, lavender theme. Light and dark follow the system.
+
+| Token | Light | Dark |
+| --- | --- | --- |
+| background | `#faf8ff` | `#141219` |
+| accent | `#211b2e` | `#efeafb` |
+| body | `#4c4366` | `#b5aec8` |
+| sub | `#6a6285` | `#9890b3` |
+| highlight | `#ece6fb` | `#2b2638` |
